@@ -161,8 +161,14 @@ local function armL4(H, yt, col, m)
 			pulse(ring, 0.05, 0.5, 4)
 		end
 	end
-	B.fx.haloRing(at(0, yt * 0.34 + 0.18, 0) * CFrame.Angles(math.rad(12), 0, 0), 1.3, 14, GOLD_GLOW, 1.4, m)
-	B.fx.haloRing(at(0, yt * 0.67 + 0.18, 0) * CFrame.Angles(math.rad(-12), 0, 0), 1.15, 12, GOLD_GLOW, -1.1, m)
+	-- 光环挂在会开合的臂上：SpinFollowParent 让客户端按臂的当前姿态算光环位置，
+	-- 服务器 setPose 同步过来时不会把客户端转过的角度冲掉（否则开合补间时光环会抖）
+	for _, hr in ipairs({
+		B.fx.haloRing(at(0, yt * 0.34 + 0.18, 0) * CFrame.Angles(math.rad(12), 0, 0), 1.3, 14, GOLD_GLOW, 1.4, m),
+		B.fx.haloRing(at(0, yt * 0.67 + 0.18, 0) * CFrame.Angles(math.rad(-12), 0, 0), 1.15, 12, GOLD_GLOW, -1.1, m),
+	}) do
+		hr:SetAttribute("SpinFollowParent", true)
+	end
 	-- 外侧金色尾翼（上大下小）
 	B.wedge(V(0.25, 3.4, 1.4), at(0.66, yt - 2.6, 0) * CFrame.Angles(0, math.pi / 2, 0), { Name = "Fin", Color = col, Material = MET, Reflectance = 0.15 }, m)
 	B.wedge(V(0.22, 2.2, 1.0), at(0.72, yt * 0.45, 0) * CFrame.Angles(0, math.pi / 2, 0), { Name = "Fin", Color = col, Material = MET, Reflectance = 0.15 }, m)
@@ -220,7 +226,15 @@ local function footBase(F, lvl, level, m) -- 静止地脚（F = 地脚底面中�
 end
 
 ------------------------------------------------------------------ 建造
-local DECO = { Hazard = true, Bolt = true, Rivet = true, FootTrim = true, ArmTrim = true, Band = true, Tooth = true, Hose = true, Groove = true, WeightBand = true, JointCap = true }
+-- 装饰件（关碰撞 / 查询）：细小零件和 L3 / L4 的外挂细节；立柱、臂、夹爪主体、地脚保持可碰撞
+local DECO = {
+	Hazard = true, Bolt = true, Rivet = true, FootTrim = true, ArmTrim = true, Band = true, Tooth = true, Hose = true, Groove = true, WeightBand = true, JointCap = true,
+	-- L3 重型
+	RailFlange = true, Brace = true, Tie = true, JointPlate = true, Flange = true, Counterweight = true, ClampCap = true,
+	Sleeve = true, SleeveBand = true, Rod = true, Clevis = true, HingeCheek = true,
+	-- L4 星辉
+	Fin = true, ArmFin = true, Hub = true, ClampHead = true, Prong = true,
+}
 -- padCF：发射台中心（地面），level 1–4
 function A.build(padCF, level, parent)
 	local lvl = A.LEVELS[level]

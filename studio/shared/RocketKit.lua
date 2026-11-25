@@ -101,18 +101,18 @@ local function setTag(inst, tag, on)
 	if on then CS:AddTag(inst, tag) else CS:RemoveTag(inst, tag) end
 end
 
--- 彩虹附加件（每次 setFlame 重建）：
+-- 彩虹附加件（彩虹点火时建一次，之后 setFlame 只原地改尺寸 / 位置，不重建，避免拖尾和星火每次被重置）：
 --   6 片彩虹焰瓣绕轴一圈、略向外张（客户端 RainbowFX 让颜色沿圈流动）；
 --   4 道彩虹激波环沿火焰排开（越往下越小）；喷口白色辉光球；彩虹星火粒子；
 --   彩虹拖尾（Trail，火箭移动时才拉出来，飞行 / 狂热时可见）。
-function K.rainbowExtras(f, anchorCF, down, len, wid, s)
+local SHOCK_FRACS = { 0.18, 0.38, 0.58, 0.78 }
+
+function K.rainbowExtras(f, anchorCF)
 	local x = B.model("RainbowExtras", f)
 	local ra = B.part({ Name = "RainbowAnchor", Size = V(0.2, 0.2, 0.2), CFrame = anchorCF, Transparency = 1, CastShadow = false }, x)
 	B.deco(ra)
-	local Lh = OUTER.h * len * s
 	for k = 0, 5 do
-		local cf = down * CFrame.Angles(0, k * math.pi / 3, 0) * CFrame.new(0.7 * wid * s, 0, 0) * CFrame.Angles(0, 0, math.rad(-7))
-		local p = B.cone(1.5 * wid * s, Lh * (k % 2 == 0 and 1 or 0.86), cf, { Name = "RainbowPetal", Color = K.RAINBOW_HUES[k + 1], Material = NEON, Transparency = 0.08, CastShadow = false }, x)
+		local p = B.cone(1, 1, anchorCF, { Name = "RainbowPetal" .. k, Color = K.RAINBOW_HUES[k + 1], Material = NEON, Transparency = 0.08, CastShadow = false }, x)
 		B.deco(p)
 		p:SetAttribute("RainbowOffset", k / 6)
 		p:SetAttribute("PulseBase", 0.06)
@@ -121,16 +121,10 @@ function K.rainbowExtras(f, anchorCF, down, len, wid, s)
 		CS:AddTag(p, "RainbowFX")
 		CS:AddTag(p, "PulseFX")
 	end
-	local outerR = OUTER.d * 0.5 * wid * 1.3 * s
-	for i, frac in ipairs({ 0.18, 0.38, 0.58, 0.78 }) do
-		local r = outerR * (1 - 0.925 * frac) + 0.3 * s
+	for i in ipairs(SHOCK_FRACS) do
 		local ad = Instance.new("CylinderHandleAdornment")
-		ad.Name = "ShockRing"
+		ad.Name = "ShockRing" .. i
 		ad.Adornee = ra
-		ad.Radius = r
-		ad.InnerRadius = math.max(0, r - 0.3 * s)
-		ad.Height = 0.2 * s
-		ad.CFrame = CFrame.new(0, -Lh * frac, 0) * CFrame.Angles(math.pi / 2, 0, 0)
 		ad.Color3 = K.RAINBOW_HUES[(i * 2 - 2) % 6 + 1]
 		ad.Transparency = 0.1
 		ad.AlwaysOnTop = false
@@ -142,8 +136,6 @@ function K.rainbowExtras(f, anchorCF, down, len, wid, s)
 	local glow = Instance.new("SphereHandleAdornment")
 	glow.Name = "NozzleGlow"
 	glow.Adornee = ra
-	glow.Radius = 1.9 * wid * s
-	glow.CFrame = CFrame.new(0, -0.4 * s, 0)
 	glow.Color3 = Color3.new(1, 1, 1)
 	glow.Transparency = 0.78
 	glow.AlwaysOnTop = false
@@ -159,17 +151,14 @@ function K.rainbowExtras(f, anchorCF, down, len, wid, s)
 	sp.LightInfluence = 0
 	sp.Rate = 80
 	sp.Lifetime = NumberRange.new(0.6, 1.2)
-	sp.Speed = NumberRange.new(12 * s, 26 * s)
 	sp.SpreadAngle = Vector2.new(35, 35)
 	sp.Drag = 2
 	sp.Rotation = NumberRange.new(0, 360)
 	sp.RotSpeed = NumberRange.new(-180, 180)
-	sp.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9 * s), NumberSequenceKeypoint.new(1, 0) })
 	sp.Parent = ra
 
 	local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
 	a0.Name, a1.Name = "TrailL", "TrailR"
-	a0.Position, a1.Position = V(-1.4 * wid * s, -0.3 * s, 0), V(1.4 * wid * s, -0.3 * s, 0)
 	a0.Parent, a1.Parent = ra, ra
 	local tr = Instance.new("Trail")
 	tr.Name = "RainbowTrail"
@@ -184,6 +173,37 @@ function K.rainbowExtras(f, anchorCF, down, len, wid, s)
 	tr.WidthScale = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0.2) })
 	tr.Parent = ra
 	return x
+end
+
+-- 按当前火焰长度 / 宽度 / 缩放原地摆放彩虹附加件（每次 setFlame 调用，只改属性）
+function K.layoutRainbow(x, anchorCF, down, len, wid, s)
+	local ra = x:FindFirstChild("RainbowAnchor")
+	ra.CFrame = anchorCF
+	local Lh = OUTER.h * len * s
+	for k = 0, 5 do
+		local p = x:FindFirstChild("RainbowPetal" .. k)
+		local h = Lh * (k % 2 == 0 and 1 or 0.86)
+		local cf = down * CFrame.Angles(0, k * math.pi / 3, 0) * CFrame.new(0.7 * wid * s, 0, 0) * CFrame.Angles(0, 0, math.rad(-7))
+		p.Size = V(1.5 * wid * s, h, 1.5 * wid * s)
+		p.CFrame = cf * CFrame.new(0, h / 2, 0)
+	end
+	local outerR = OUTER.d * 0.5 * wid * 1.3 * s
+	for i, frac in ipairs(SHOCK_FRACS) do
+		local ad = ra:FindFirstChild("ShockRing" .. i)
+		local r = outerR * (1 - 0.925 * frac) + 0.3 * s
+		ad.Radius = r
+		ad.InnerRadius = math.max(0, r - 0.3 * s)
+		ad.Height = 0.2 * s
+		ad.CFrame = CFrame.new(0, -Lh * frac, 0) * CFrame.Angles(math.pi / 2, 0, 0)
+	end
+	local glow = ra:FindFirstChild("NozzleGlow")
+	glow.Radius = 1.9 * wid * s
+	glow.CFrame = CFrame.new(0, -0.4 * s, 0)
+	local sp = ra:FindFirstChild("RainbowSparks")
+	sp.Speed = NumberRange.new(12 * s, 26 * s)
+	sp.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9 * s), NumberSequenceKeypoint.new(1, 0) })
+	ra:FindFirstChild("TrailL").Position = V(-1.4 * wid * s, -0.3 * s, 0)
+	ra:FindFirstChild("TrailR").Position = V(1.4 * wid * s, -0.3 * s, 0)
 end
 
 function K.setFlame(rocket, o)
@@ -216,13 +236,17 @@ function K.setFlame(rocket, o)
 		setTag(p, "RainbowFX", false) -- 彩虹色交给下面的焰瓣
 		-- 焰锥轻微闪烁（客户端 PulseFX：透明度呼吸）
 		p:SetAttribute("PulseBase", tr)
-		p:SetAttribute("PulseAmp", 0.18)
+		p:SetAttribute("PulseAmp", math.min(0.18, 1 - tr)) -- 呼吸峰值不超过透明度 1，否则外焰会周期性整段消失
 		p:SetAttribute("PulseSpeed", 22)
 		setTag(p, "PulseFX", on)
 	end
-	local oldExtras = f:FindFirstChild("RainbowExtras")
-	if oldExtras then oldExtras:Destroy() end
-	if on and rainbow then K.rainbowExtras(f, anchor.CFrame, down, len, wid, s) end
+	local extras = f:FindFirstChild("RainbowExtras")
+	if on and rainbow then
+		extras = extras or K.rainbowExtras(f, anchor.CFrame)
+		K.layoutRainbow(extras, anchor.CFrame, down, len, wid, s)
+	elseif extras then
+		extras:Destroy()
+	end
 
 	local col = K.FLAME[tier]
 	local ex = anchor:FindFirstChild("Exhaust")

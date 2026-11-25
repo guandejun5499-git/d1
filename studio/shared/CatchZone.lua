@@ -10,6 +10,7 @@
 
 local B = require(script.Parent.BuildLib)
 local hex = B.hex
+local CS = game:GetService("CollectionService")
 
 local Z = {}
 Z.R = 3.3
@@ -48,8 +49,10 @@ function Z.build(deckCF, parent)
 	local anchor = B.part({ Name = "ZoneAnchor", Size = Vector3.new(0.2, 0.2, 0.2), CFrame = deckCF, Transparency = 1, CastShadow = false }, m)
 	B.deco(anchor)
 	-- 光柱用实心圆柱（InnerRadius = 0）：细壁高筒会在屏幕上画出横贯全屏的细线（11-24 实测）
-	adorn(anchor, "GreenColumn", Z.R, 0, 1, Z.GREEN, 0.78)
-	adorn(anchor, "YellowColumn", Z.R, 0, 1, Z.YELLOW, 0.8)
+	-- 镜头进入实心光柱时整屏会被染色：打 HideInsideFX 标签，客户端 RocketFX 在镜头位于柱内时临时隐藏
+	for _, c in ipairs({ adorn(anchor, "GreenColumn", Z.R, 0, 1, Z.GREEN, 0.78), adorn(anchor, "YellowColumn", Z.R, 0, 1, Z.YELLOW, 0.8) }) do
+		CS:AddTag(c, "HideInsideFX")
+	end
 	adorn(anchor, "GreenRing", Z.R + 0.14, Z.R - 0.12, 0.22, Z.GREEN, 0.1)
 	adorn(anchor, "YellowRing", Z.R + 0.14, Z.R - 0.12, 0.22, Z.YELLOW, 0.1)
 	adorn(anchor, "BaseRing", 2.6, 2.2, 0.22, Z.WHITE, 0.05)
