@@ -1,0 +1,265 @@
+# 交接文档 · Orbit Roll Roblox Studio 3D 制作（2026-11-24）
+
+> 给 Claude Code 里 Project_D1 新会话的上下文，接 `docs/HANDOFF_ART.md`。
+> 阅读顺序：`HANDOFF_ART.md`（角色、美术方向、已定设计）→ **本文件**（Studio 里做到哪、怎么做的、下一步）→ `docs/3D制作计划.md`（后续清单）→ `docs/SESSION_NOTES.md` 第 7–9 节（每轮调整细节）。
+> 游戏设计的唯一权威仍是 `docs/火箭发射游戏设计方案.md`。
+
+---
+
+## 1. 协作约定（本会话里用户新增或强调的）
+
+- Claude 是 **Roblox 美术总监**，回复用中文。方向明确就直接做，做完用游戏镜头截图展示，说明重点验收项。
+- **规则改动要同步**：设计方案 → Web Demo → 原画。Studio 改动同时更新 `studio/world/` 下的脚本和 `SESSION_NOTES.md`。
+- **自发光要克制**：用户嫌晃眼，Neon 只留在灯、全息、尾焰、门光边。地台边下方的家园色霓虹细线（RimGlow）是用户点名要保留的。
+- **每次改完场景都要复位相机，而且必须是这一轮最后一个 Studio 调用**（用户 11-24 两次指出；保存 `save_place` 之后也要再复位一次，复位后等 1 秒再读一次确认）：带 `camera_position` 的 `screen_capture` 会把 `workspace.CurrentCamera.CameraType` 留在 Scriptable，用户在编辑模式下就无法右键转视角。凡是动过场景的回合，结束前都执行一次，并确认读回 Fixed：
+  ```lua
+  workspace.CurrentCamera.CameraType = Enum.CameraType.Fixed
+  ```
+- 截图发白或超时，通常是 Studio 窗口不在前台：请用户切到前台，或改用数值检查（射线、零件数、包围盒）。
+- 大改之前先给方案或白盒，用户确认再精做。用户给的反馈通常很具体（「保留最底部」「反过来排」），照做即可，不要顺手改别的。
+
+## 2. Studio 环境
+
+| 项目 | 值 |
+|---|---|
+| 场景 | 「D1-火箭发射」，placeId **104365800097917**，Team Create，已保存到 **版本 49**（11-25，含付费回收支架五轮；版本 36 = 11-24 晚 P0 运行态资产；版本 28 = 邻居家园 + 场景放大） |
+| 连接方式 | Roblox Studio MCP（`execute_luau`、`screen_capture`、`save_place`、`start_stop_play`、`character_navigation` 等） |
+| Studio 实例 id | 每次重连都会变。先调用 `list_roblox_studios`，按名字找「D1-火箭发射」 |
+| 根节点 | `Workspace.OrbitWorld`：`Islands`、`Planets`、`Homes.Home_0`–`Home_5`、`_PartsReview`（临时部件验收台）、`_P0Review`（临时 P0 验收台） |
+| 资产 | `ServerStorage.WorldAssets`：`SpaceSky`、`SpaceSky_Alt`；原默认 Baseplate 也收在这里。**BuildLib 11-24 已挪到 `ReplicatedStorage.OrbitShared`** |
+| 共享模块 | `ReplicatedStorage.OrbitShared`：`BuildLib`、`Orbits`、`RocketKit`、`CatchArms`、`CatchZone`、`OrbitGate`、`Stardust`、`PartPad`、`AssemblyBay`（服务器和客户端都能 require，见第 14 节）|
+| 建造脚本副本 | `ServerStorage.WorldBuild`：`B03_planets`、`B04_home_launch`、`B05_home_bay`、`B06_home_roll`、`B09_p0_review`（与 `studio/world/` 同内容的 ModuleScript；重跑 = require 一个克隆，见第 3 节） |
+| 运行时模板 | `ReplicatedStorage.RocketAssets`：`ConeTemplate`、`DomeTemplate` |
+| 客户端脚本 | `StarterPlayer.StarterPlayerScripts.RocketFX`（SpinFX / PulseFX / RainbowFX / BreatheFX） |
+| 服务器脚本 | **还没有**。所有设施都是静态模型 |
+| 规模 | 全场约 4800 零件（11-24 P0 后）：Islands 401、Planets 359（含两道轨道门、木星轨道、转场航线）、Home_0 611（全量，4 盏 PointLight，预算 ≤ 8）、Home_1–5 共 1017（简化版 163–254 / 家，支架等级不同）、部件验收台 1332、P0 验收台 1187 |
+
+## 3. 建造脚本（`studio/world/`，均可重复运行）
+
+脚本在 Studio 里通过 `execute_luau` 运行，运行时会先删掉同名旧对象再重建。
+
+**11-24 起的跑法**：03–06、09 在 `ServerStorage.WorldBuild` 里各有一份同内容的 ModuleScript（名字前加 B，如 `B04_home_launch`）。改了本地文件后用 `multi_edit` 同步那份，重跑时：
+```lua
+local s = game.ServerStorage.WorldBuild.B04_home_launch:Clone(); s.Parent = game.ServerStorage
+print(require(s)); s:Destroy()
+```
+脚本内部会克隆整个 `ReplicatedStorage.OrbitShared` 再 require（模块之间互相 require，克隆能避开编辑器的模块缓存）。本地 `studio/shared/*.lua` 与 Studio 里的模块逐字节一致（BuildLib 除外：Studio 那份去掉了注释）。
+
+**04–07 已参数化（11-24 下午）**：脚本体包在 `build(K, LITE)` 里，顶部 `TARGETS = { 0, 1, 2, 3, 4, 5 }`，一次运行建全部六家；K = 0 全量，其余 `LITE = true`。家园色取 `B.homeColor(K)`。简化版的做法是先建全量、再用 `B.lite(model, LITE_DROP)` 按名字删细节件并去掉所有 Light 和 Surface / Billboard 文字，所以坐标只有一份。只重建某几家时改 `TARGETS`。Studio 里的 BuildLib 是去掉注释的版本，打补丁要用纯文本查找替换（第 7 节）。
+
+| 文件 | 内容 | 关键参数 |
+|---|---|---|
+| `01_atmosphere.lua` | 天空盒、光照、Bloom、ColorCorrection | ClockTime 14.5；Ambient #4A4472、OutdoorAmbient #8E88B4、ColorShift_Top #E4DCFF、Brightness 1.6；Bloom 0.7 / 28 / 1.6；饱和 +0.12、对比 +0.08；无 Atmosphere |
+| `02_islands.lua` | 广场、6 家地台、连桥、岩体、光柱、信标、漂浮光点、出生点 | PLAZA_R 60、HOME_R 55、HOME_D 122、BRIDGE_W 26（11-25 放大，原 46 / 42 / 94 / 22）；装饰尺度 S = 1.3（岩体深度、碎石、晶体）；中央圆台 Ø24；家园地面 #DEDBF0、广场 #C9C5E6；凸点贴图 `rbxassetid://123208729655253`，透明 0.72；广场光柱高 65；家园光柱高 156，在本地 (23.4, apo − 6) |
+| `03_planets.lua` | 月球、锁定木星；11-24 起含正式轨道门（月球 normal、木星 locked）、木星轨道虚线、月球 → 木星转场航线 | 月球 (−50, 190, −60) r 28；木星 (170, 400, −220) r 72，ForceField 紫色护盾，锁定标签在星球下方 |
+| `studio/shared/BuildLib.lua`（原 `world/lib/`） | 建造工具 + 火箭部件 v2 + 特效工具 | 见第 4 节；`B.rocket` 的 WorldPivot = 发动机底面中心 |
+| `04_home_launch.lua` | 发射台、L1 支架、塔架、升级牌、台上火箭 | 发射台 Ø17 × 1.5 在 (0, −26)；L1 支架高 6.5，x = ±6.2；塔架高 25 在 (−9, −35)；升级牌 (−9.5, −22.5) |
+| `05_home_bay.lua` | 组装舱 + 运输带 | 中心 (33.8, −6.5)；底座 18 × 18 × 1.2，立柱 18.8；−X（门）、−Z、+Z 三面玻璃，+X 机械墙；门楣信息屏朝 −X；运输带 (26.2, −6.5) → (6.58, −21.1) |
+| `06_home_roll.lua` | Roll 按钮、4 座部件台、概率牌 | 见第 5 节 |
+| `07_home_misc.lua` | 出生点标记 (0, −6.5)、3 个店位 (−31.2, −15.6 / 0 / 15.6) 朝 +X | 「即将开放」 |
+| `08_parts_review.lua` | 临时部件验收台（可行走） | 见第 6 节 |
+| `09_p0_review.lua` | 临时 P0 验收台（可行走，接在部件验收台右侧） | 见第 14 节 |
+| `studio/client/RocketFX.client.lua` | 客户端动画 | 标签 SpinFX（绕 WorldPivot Y 轴转，属性 SpinSpeed）、PulseFX（透明度呼吸 / 闪烁，属性 PulseBase / PulseAmp / PulseSpeed）、RainbowFX（零件或 HandleAdornment 色相循环，属性 RainbowOffset）、BreatheFX（模型缩放呼吸，属性 BreatheAmp）；600 studs 外跳过 |
+
+**家园坐标**：家园 k 的框架为
+
+```lua
+local a = math.rad(60 * k)
+CFrame.new(Vector3.new(math.sin(a), 0, math.cos(a)) * 122) * CFrame.Angles(0, a, 0) -- B.HOME_D
+```
+
+本地 −Z 朝广场。玩家自家 K = 0，中心 (0, 0, 122)（11-25 前为 94）。
+
+> 04–07 已按 K 参数化（T3 完成），见本节开头。
+
+## 4. BuildLib 与火箭部件 v2
+
+**通用工具**：`B.part / deco / box / wedge / cyl / cylAt(dia, y0, h, cf, props, parent) / discZ / ball / beamBetween / segRing / model / decoAll / homeFrame(k) / homeFolder(k) / replace / surfaceText`，以及几何工具 `B.cone`、`B.dome`。11-24 新增 `B.HOME_COLORS`、`B.homeColor(k)`、`B.lite(root, drop)`。
+
+**部件零件数**（基础 / 高级 / 精英）：鼻锥 6 / 10 / 32，燃料舱 11 / 13 / 97，发动机 8 / 18 / 27，尾翼 12 / 16 / 52。精英燃料舱和栅格尾翼最重，简化场景里慎用。
+
+**部件**：`B.nose(tier, cf, parent)`、`B.tank(tier, cf, homeColor, parent, deco)`、`B.engine(tier, cf, parent)`、`B.fins(tier, cf, parent)`、`B.rocket(eq, homeColor, cf, parent)`（`eq = {nose, tank, engine, fins, deco}`）、`B.holo(inst, color)`（Neon 0.72）。
+
+- D1 尺寸体系：机身 Ø4，接口环 Ø4.4 × 0.35，轴心在底面中心，按 发动机 → 燃料舱 → 鼻锥 沿 Y 堆叠。
+- 高度：ENGINE_H {3, 3.4, 3.4}，TANK_H {4, 6, 8}，NOSE_H {3, 4, 3.4}。
+- 鼻锥是光滑圆锥 / 子弹头，不叠层（用户要求）。
+- 色板规则优先于原画：基础银、高级蓝、精英金，机身白 + 石墨。
+
+**第三档科技装饰**（用户要求第三档及以上体现高级品质）：
+- 黄金鼻锥：金色全息环（半径 2.7）。
+- 巨型燃料舱：默认两侧**能量电池舱** `B.fx.powerCell`，外加青色全息环（半径 4.3）。
+- 等离子发动机：能量线圈、侧推进舱、闪光粒子。
+- 栅格尾翼：脉动光球。
+
+**特效工具 `B.fx`**：`haloRing(cf, radius, n, color, speed, parent)`、`orb(cf, d, color, parent)`、`sparkles(part, color, rate, size)`、`powerCell(cf, side, y0, h, parent)`、`solarWing(cf, side, parent)`。
+
+**太阳能翼板**：用户先嫌第一版丑，换成电池舱。之后翼板按科技 + 金属质感重做，**留给第四档及以上**（如锻造融合神话件）。燃料舱传 `deco = "solar"` 可切换。
+
+## 5. Roll 区现状（`06_home_roll.lua`，用户两轮精简后）
+
+| 对象 | 规格 |
+|---|---|
+| 部件台位置 | x = 15.9 / 7.9 / −0.1 / −8.1，z = 24.7，间距 8（鼻锥、燃料舱、发动机、尾翼；玩家视角从左到右）；部件区地面 37 × 13，中心 (3.9, 24.7) |
+| 部件台结构 | 原石墨底座 Ø6.2 × 0.75 + 黄色虚线环（半径 2.85，用户要求保留）→ 白圆筒 Ø5（0.75 起，高 1.0）→ 状态环灯 Ø5.2（1.75 起，高 0.18）→ 顶板 Ø5（1.93 起，高 0.17）→ 全息盘 Ø3 在 2.10；总高约 2.15 |
+| 悬浮部件 | 2.6 起悬浮；显示缩放 鼻锥 0.75、发动机 0.8、尾翼 0.6 |
+| 价格卡 | BillboardGui，中心高 8.35（SOLD 卡 7.65）；精英光柱从 2.15 起 |
+| Roll 按钮 | (2.6, 11.7)：石墨托盘 Ø4.6 × 0.45 → 白圆筒 Ø3.4 × 1.45 → 绿色圆顶 Ø2.9 × 0.75（#3BD85C）；绿色 PointLight 范围 8、亮度 0.6 |
+| 概率牌 | 4.8 × 1.2，在 (7, 11.7) |
+
+当前是预览摆法：鼻锥 高级·气动 40 / 燃料舱 SOLD / 发动机 精英·等离子 220 / 尾翼 基础。正式状态要由运行时 Roll 系统改写。
+
+## 6. 临时验收台（`_PartsReview`）
+
+- 框架：`R = CFrame.new(0, 0, HOME_BACK + 28) * CFrame.Angles(0, math.pi, 0)`，`HOME_BACK = B.HOME_D + 55·cos30° ≈ 169.6`，中心 z ≈ 197.6。甲板 104 × 46，前沿在家园背面边缘外 5 studs（z ≈ 174.6）。
+- 左边 4 行 × 3 档单件，从前到后依次为鼻锥、发动机、尾翼、燃料舱。右边 5 枚整箭：首航、高级全套、金币路线、最优木星、精英全套，间距 12。后排有翼板版预览，另有 5 studs 比例参照。
+- 甲板、裙边、展台有碰撞，部件和标签没有。家园背面到平台有一条 10 宽 × 8 长的黄色护栏步道，已用 Play 测试走通。
+- **验收完整块删除**（1332 零件），删除时间待用户决定。
+
+## 7. 已知渲染限制与绕开办法
+
+| 问题 | 办法 |
+|---|---|
+| 夜间（ClockTime 0）隐藏自定义天空盒 | ClockTime 14.5，隐藏太阳，用紫色环境光做出夜空感 |
+| 白天 Atmosphere 把星云冲成灰雾 | 不加 Atmosphere |
+| `Lighting.Technology` 已被移除 | 改用 LightingStyle = Soft + PrioritizeLightingQuality |
+| Glass / ForceField 背后的半透明物体不渲染 | 组装舱玻璃用 SmoothPlastic，透明 0.72，反光 0.12；全息用 Neon 0.72 |
+| 半透明玻璃前的 SurfaceGui 被吃掉 | 信息屏挂在实心石墨门楣上 |
+| Decal id 不能直接当 Texture | 用 `game:GetObjects` 解析出 image id |
+| 圆锥网格（1033714）尖顶被截平 | 侧面 r(t) = R·(1 − 0.925 t)；叠加的小圆锥要满足 h ≥ 1.85·R |
+| MeshPart 做实体运算得到的是内存网格，存档可能丢失 | 不对 MeshPart 做 CSG；半球用 UnionOperation 模板 |
+| 往 `ModuleScript.Source` 打补丁 | 用 `string.find(src, marker, 1, true)` 纯文本查找替换，或 MCP `multi_edit`；测试时 `require` 一个克隆，避开缓存 |
+| CylinderHandleAdornment 细壁高筒（InnerRadius 接近 Radius、Height 很大）会画出横贯全屏的细线 | 光柱用实心圆柱（InnerRadius = 0）；细圆环（Height 0.2 左右）没问题 |
+| 半透明饱和金色叠在夜空上发褐（Roblox 是普通混合，不是 Web 的加法混合） | 光晕用接近白色的浅色 + 高透明（0.88–0.94）；要真发光用 Neon 小件 |
+| 刚重建的 SurfaceGui 立刻截图会是空白 | 等一两秒再截，或用数值检查文字内容 |
+| 编辑模式下客户端动画不跑 | 自转 / 彩虹 / 闪烁 / 呼吸要 Play 才看得到；可在 Client 数据模型里用 execute_luau 读颜色、缩放来验证 |
+
+## 8. 本会话的决定与用户反馈（按时间）
+
+1. **任务一已验收。** 中心距 94（原 110）、ClockTime 14.5 都已确认。自发光削减，RimGlow 保留。
+2. **任务二已验收。** 部件台反向排列；组装舱改为三面玻璃，信息屏挪到门楣。
+3. **部件 v2。** 鼻锥改成圆锥；第三档加科技装饰和特效；翼板 → 电池舱；翼板 v2 留给第四档；家园全部换成新部件。
+4. **验收台。** 挪到家园背面外 5 studs，并改成可行走。
+5. **编辑相机卡住。** 原因是截图把相机留在 Scriptable，已复位，并写进记忆。
+6. **Roll 精简。** Roll 按钮只留托盘、圆筒、绿按钮；部件台降低精简，保留原底座。
+7. **后续计划。** 输出 `docs/3D制作计划.md`（P0 11 项、P1 10 项、P2 6 项、技术 T1–T5、原画缺口）。
+
+## 9. 美术清单（A1–E2）当前状态
+
+用户给过一张 Loop 1 美术制作清单（17 项）的截图，各项编号和状态如下：
+
+| 状态 | 项目 |
+|---|---|
+| 已画，基本一致 | A1 风格定调、A2 色板与材质（A2 里的 ClockTime 0、Glass 组装舱与 Studio 实现有出入，见第 7 节） |
+| 已画，但需按 Studio 现状更新 | **A3** 比例尺（火箭 10.4–15.8、组装舱总高约 22.1、部件台约 2.15）、**B1** 家园布局（部件台反向）、**C1** 部件台与 Roll（绿色按钮 + 精简台；清单原写的「玻璃穹顶 + 胶囊 Roll 机」早已废弃）、**C2** 组装舱（三面玻璃 + 门楣屏）、**D1** 部件体系（v2 造型） |
+| 未画，Studio 已有 3D 可参考 | **B2** 世界布局、**B3** 星球（解锁态未做）、**C3** 发射台 + 塔架 + 支架（只有 L1）、**C4** 升级牌 + 店位、**D2** 整箭组合 |
+| 原画和 3D 都没做 | **C5** 轨道门（正式版）+ 星尘碎片、**D3** 尾焰、**E1** 维修无人机、**E2** 关键时刻效果板 |
+
+原画 PNG 在 `art/concept/`，设计画布在 `HANDOFF_ART.md` 第 5 节的链接里。
+
+## 10. 未同步 / 待办
+
+- **Web Demo（`web-build/index.html`）落后于 Studio**：
+  - 中心距还是 110；组装舱还是两面机械墙。
+  - Roll 按钮还是橙色多层版，部件台还是旧高度，部件还是 v1 造型。
+  - 组装演出还是 4.8 s 版。
+  - 部件台顺序（PEDS）已改。
+  - 飞行中火箭放大还是 1.9（Roblox 已定 1.5）。
+  - 回收支架：Web 臂高 5 / 6.5 / 8 / 9.5、只有颜色变化；Studio 按 A3 做成 6.5 / 8 / 10 / 12，每级造型不同（L2 液压、L3 桁架、L4 光点）。
+  - `orbit-roll-web.zip` 还没重新打包。
+- **原画**：A3、B1、C1、C2、D1 需要更新（见第 9 节）。C3（L2–L4 支架）、C5（轨道门 + 星尘）、D3（尾焰）现在有 3D 可参考，可以照 P0 验收台出原画。
+- **设计方案**已同步：场景放大（中心距 122、家园坐标表）、ClockTime 14.5、部件台坐标、C2 三面玻璃、档次装饰段落、邻居简化版 / 广场商店 3 个 / 飞行放大 1.5。
+
+## 11. 邻居家园（11-24 下午，待用户验收）
+
+| 家园 | 色 | 台上火箭 | 零件 |
+|---|---|---|---|
+| Home_1 | #FF5E7A | 高级全套 | 175 |
+| Home_2 | #FFB33D | 基础 + 大燃料舱 | 157 |
+| Home_3 | #A46BFF | 黄金鼻锥 + 大燃料舱 + 等离子 + 后掠（全套精英 229 件，放不下） | 206 |
+| Home_4 | #2FD3C8 | 气动鼻锥 + 等离子发动机 | 178 |
+| Home_5 | #FF8AD8 | 涡轮 + 后掠尾翼 | 169 |
+
+简化版保留：发射台底座 / 台面 / 导流板、L1 支架、塔架（信标球不带灯）、组装舱底座 / 外框 / 状态灯 / 三面玻璃 / 门 / 门楣 / 机械墙 / 转台 / 龙门吊 / 运输带主体、部件区地面、4 座部件台（待机态：环灯暗、无悬浮件、无价格卡）、Roll 按钮（绿色是功能色，各家一致）、3 个店位外形。去掉：警示条纹、虚线环、格栅、升级牌、管线、面板缝、信息屏、部件坞、液压支柱、组装舱全息、机械臂、控制台、滚轮、箭头、名牌、概率牌、出生点标记、卷帘细线、檐口、所有点光源和文字。
+
+**本轮决定（11-24 下午）**：邻居用简化版；Roblox 飞行中火箭放大 **1.5 倍**（Web Demo 1.9，待同步）；广场商店 **3 个**，在 30° / 150° / 270° 桥间空档；验收台删除时间由用户提醒，**在用户开口前不要删**。均已写入设计方案。
+
+**还没做**：NPC 定时发射（Web Demo 有）属于运行时脚本，留到运行时火箭模块（计划第 11 项）之后；广场商店模型未建。
+
+## 12. 下一步
+
+**11-24 更新**：P0 第 1–11 项都已做完（见第 14 节），等用户在 `_P0Review` 验收。验收通过后按 `docs/3D制作计划.md` 做 P1（第 12 项组装演出起），再 P2；每组做完先补原画、再同步 Web Demo。
+
+## 13. 场景放大约 1.3 倍（11-25，待用户验收）
+
+用户参考《Mine a Planet》觉得场景偏小。网上查不到它的具体尺寸，按用户截图印象和 Roblox 模拟器类常见尺度给了 1.3 / 1.5 / 2 倍三档，**用户选 1.3 倍，设施模型保持原尺寸，只拉开间距**。
+
+- **世界**：家园 R 42 → 55、广场 R 46 → 60、中心距 94 → 122、桥宽 22 → 26（桥长 22.4，净宽 24.2）、邻居间距 21 → 27。岩体深度 / 碎石 / 晶体 ×1.3，中央圆台 Ø24，光柱加高。
+- **星球**：03 建完后 `Model:ScaleTo(1.3)`，以世界原点为轴心，位置和尺寸一起放大（月球 r 36.4，木星 r 93.6）。Studio 里是直接对现有星球执行 ScaleTo，没有重跑 03。
+- **设施**：按组整体外移约 1.3 倍，组内相对位置不变。发射区（台 + 塔 + 升级牌 + 服务臂）、组装舱、Roll 区、店位、出生点各一个锚点。部件台间距 6.2 → 8（原来台与台贴边）；运输带终点重新算到发射台边缘 8.2 处。
+- **验收台**：整体 PivotTo 平移 +39.26（z），08 脚本改成按 `B.HOME_D` 推算位置。
+- **检查**：六家所有零件都在地台六边形内，最贴边是组装舱外角，余 2.8 studs（放大前已伸出边缘）。射线确认出生点、桥面、家园背边、步道、验收台都有地面。
+- **Studio 里的 BuildLib** 已打补丁：`B.HOME_D = 122`。
+- **已保存为版本 28**（11-25，Team Create）。**Web Demo 仍是 110 / 旧坐标**，待同步。
+- **遗留问题**：设计方案定的广场 3 个商店空档（30° / 150° / 270°）和广场 6 根光柱（30° + 60°·k）重合，做商店时要挪光柱或把商店放在光柱旁。
+
+## 14. P0 · 核心循环运行态资产（11-24，待用户验收）
+
+用户要求先把 `3D制作计划.md` 的 P0 全部做完再验收。第 1 项（邻居家园）之前已做；这次做完第 2–11 项。规则和数值都沿用设计方案 / Web Demo，没有新的设计改动。
+
+**共享模块（`ReplicatedStorage.OrbitShared`，本地 `studio/shared/`）**
+
+| 模块 | 对应 P0 | 主要接口 |
+|---|---|---|
+| `Orbits` | 7、8 | `bodies.moon / jupiter`（Web BODIES × 1.3：月球轨道 67.6、门 a0 = 90°、门半径 9.1；木星轨道 149.5、a0 = 180°、门半径 14.3）、`pt / tan / gateCF / shardPoints / shardSize / transfer(t)` |
+| `CatchArms` | 2、3 | `LEVELS`（名字、奖金、完美窗口、颜色、高度）、`build(padCF, level, parent)`、`setPose(arms, alpha)`（0 合拢 / 1 张开外倾 28°，绕地脚铰链）、`boardLines / updateBoard(board, level)` |
+| `CatchZone` | 4 | `build(deckCF, parent)`（默认隐藏）、`heightsFor(win, speed)`（窗口秒数 × 下降速度 22 → 绿区高；黄区多 0.4 s）、`set(zone, {visible, green, yellow, base, state})` |
+| `RocketKit` | 5、11 | `build(eq, homeColor, cf, parent)`（不碰撞、带尾焰）、`setFlame(rocket, {power, mode, rainbow})`（mode flight / launch / retro）、`setScale(rocket, 1.5)`、`place` |
+| `OrbitGate` | 6、7 | `build(cf, R, parent)`、`setState(gate, normal / boost / fever / locked)`（fever 放大 1.6）、`setActive`（虚线目标框）、`setShrink(gate, k)`（收缩光圈 = R × k） |
+| `Stardust` | 8 | `build(cf, r, parent)`（八面体 16 块楔形 + 光晕 + 细闪）、`collect(shard)`（客户端调用：爆发 + 隐藏） |
+| `PartPad` | 9 | `buildPad(PC, slot, parent, name)`、`setState(pad, {mode = idle / rolling / offer / sold, tier?}, {homeColor, lite})`、名字和价格表 |
+| `AssemblyBay` | 10 | `setStatus(bay, staging / ready / assembling)`（状态灯 + 门楣屏）、`setDock(bay, i, tier)`（托盘 DockPoint）、`setHolo(bay, eq)`（缺的部位淡显、自转） |
+
+**造型要点**
+- 支架：L1 灰（原造型）/ L2 蓝液压（石墨套筒 + 镀铬活塞杆 + 两侧小油缸 + 蓝色夹垫）。
+  - **L3 重型（11-24 按用户反馈加强机械感、金属质感）**：Metal 材质的工字钢双轨 + 交叉斜撑 + 连接板，花纹钢板底座 + 铰链耳板，关节钢圆盘 + 镀铬螺栓，橙色腹板 + 钢翼缘的工字钢臂（铆钉、警示条），尾端配重，镀铬大油缸 + 液压软管，深钢夹爪 + 镀铬锯齿；橙色只留在腹板、盖板、色环上。
+  - **L4 星辉（11-24 按用户反馈加强科技感）**：三段悬浮立柱（段间金色能量环脉动）+ 凹槽里的金色能量线，两道反向旋转的金色全息环，金色尾翼，白色流线臂（金背鳍、发光底线、金色关节毂），能量夹爪（白色叉齿 + 发光尖 + 脉动能量场 + 闪光），顶部光球 + 小全息环 + 星光，悬浮底座底部金色光带。
+  - 邻居简化版另外删掉铆钉、锯齿、软管、凹槽和全息环（Home_3 L4 248 件、Home_4 L3 272 件）。
+- 尾焰：外焰锥 + 内焰锥（Neon，客户端轻微闪烁）+ 火焰粒子；橙 / 蓝 / 紫三色；反推焰长 0.55 并带烟，离台带大量烟。
+  - **彩虹尾焰（11-24 按用户反馈加夸张）**：加长 1.5 倍、加宽；外焰改成淡白辉光（透明 0.88），白色核心缩短到 0.6；6 片彩虹焰瓣绕轴一圈向外张（Neon，客户端颜色沿圈流动）；4 道彩虹激波环沿火焰排开；喷口白色辉光球；彩虹星火粒子 + 更大更久的彩虹火焰粒子；彩虹拖尾 Trail（火箭移动时可见）。都在 `RainbowExtras` 子模型里，每次 setFlame 重建。
+- 轨道门：24 段金色管 + 关节球、四个石墨卡座（金盖 + 光点）、内圈光边、两层浅色光晕；虚线目标框 16 段弧、收缩光圈白环。
+- 接住区：实心半透明绿 / 黄光柱 + 两道顶环 + 火箭底部白环（进黄区变黄、进绿区变绿）。
+
+**场景里的变化**
+- 六家支架等级：自家 L1、邻居 1–5 = L2 / L1 / L4 / L3 / L2（`04_home_launch.lua` 的 `ARM_LEVEL`）；升级牌文字随等级（满级显示「已满级 · 完美窗口 0.36 s」）。
+- 每家发射台上都有隐藏的接住区；台上火箭改由 RocketKit 建（带熄火的尾焰，轴心在发动机底面，不再碰撞）。
+- 组装舱：WorldPivot = 舱底中心，托盘有 DockPoint；全息由模块建、客户端自转；门楣屏文字由 setStatus 写。
+- 部件台：台体和状态全在 PartPad，06 脚本只剩布局；悬浮部件带 SpinFX 自转。
+- 星球：月球预览门换成正式门；木星加轨道虚线（锁定时灰紫、很淡）和锁定态门；新增 `Planets.TransferRoute`。
+
+**P0 验收台 `_P0Review`**（`09_p0_review.lua`，1187 件，验收后整块删除）：接在部件验收台右侧（x 50–154，z 174.6–250.6，步道在 x 47）。从家园一侧看，从左到右：
+- 第 1 排：L1 合拢 / L2 张开 + 黄区 / L3 张开 + 绿区 / L4 合拢满级。
+- 第 2 排：橙 / 蓝 / 紫 / 彩虹 / 反推 / 离台尾焰，月球和木星两种星尘碎片。
+- 第 3 排：部件台 待机 / 开箱中 / 基础 / 高级 / 精英 / 已售出，组装舱状态灯三色。
+- 后方：轨道门 普通（目标框 + 收缩光圈）/ 增幅 / 狂热 ×1.6。
+
+**已验证**：所有模块在 Studio 里 require 通过；04–06 重建后自家仍是全量（611 件）；组装舱 setDock / setHolo / setStatus 在自家试过后已复位；升级牌 L4 文字试过后已复位 L1；Play 模式下 SpinFX / RainbowFX / BreatheFX 都在动，控制台没有脚本报错（只有一条与本次无关的资产类型警告 `rbxassetid://203785492`）。
+
+**已保存为版本 36。** **还没做**：飞行、Roll、组装等运行时逻辑（服务器脚本）不在 P0 美术范围，模块接口已备好；P1 从第 12 项组装演出开始。
+
+## 15. 付费回收支架（商业化外观，11-25，待用户验收）
+
+用户给了 4 张原画（中级 / 进阶 / 高阶概念 / 高级旗舰），要求「按商业化付费的支架考虑」：和 L1–L4 金币升级是两条线，价格、是否带数值加成待商业化设计定（牌子上写「价格待定」）。每套带自己的支架底座。
+
+- **模块** `ReplicatedStorage.OrbitShared.BracketSkins`（本地 `studio/shared/BracketSkins.lua`）：`build(P, id, parent, {guide})`、`deckCF`、`setGuide`；开合用 `CatchArms.setPose`。id = `mid / adv / hi / flag`。
+- **验收台** `_PaidBrackets`（`10_paid_brackets.lua`，Studio 副本 `B10_paid_brackets`，1821 件）：P0 验收台右侧 x 157.5–275.5，从家园一侧看从左到右 中级 / 进阶 / 高阶 / 旗舰，都合拢夹住火箭、开着绿色引导光柱。
+- **v1 被用户否决**（与原画差距太大），v2 按原画重做：臂约加粗一倍、比火箭高；装甲段 = 主体 + 凸起面板 + 面板缝 + 包边 + 灯带；光环关节 = 外壳 + 发光外圈 + 发光轴心 + 两面 6 颗螺栓；液压缸带色环和耳座；夹爪 / 磁吸模块带能量玻璃和网格线；底座多层、灯带密、警示板、散热格栅、徽标、刻度。付费外观按原画保留大量自发光。
+- **材质**：AI 生成的 MaterialVariant 在 MaterialService：`OR_BrushedAlloy`（拉丝合金，4 studs/tile）、`OR_AnodizedTitanium`（阳极钛，6）、`OR_CarbonFiber`（碳纤维，1.5）、`OR_DeckPlate`（着陆甲板，6）、`OR_VentGrille`（散热格栅，2.5）。涂装件用干净 SmoothPlastic：`OR_ArmorPaint`（Metal 底，暗光下发黑）和 `OR_PaintPlate`（出现大理石花纹）都试过弃用，变体还留在 MaterialService，可删。
+- **各套要点**：中级 = 蓝色装甲臂 + 橙色环关节 + 格构下臂 + 液压缸 + 齿爪，圆台橙色护块 + 青色灯带；进阶 = 多关节臂 + 橙色发光关节环 + 辅助稳定连杆 + 弹簧缓冲器 + 青色磁力模块，八块装甲板 + 正面警示板；高阶 = 淡紫大拱臂 + 金色发光大关节 + 黄色双液压 + 蓝色磁吸夹头，三层岛式底座 + 导向灯带坡道 + 控制台 + 路灯；旗舰 = 4 支臂（25° / 155° / 205° / 335°，避开 45° 尾翼）拉丝合金 + 碳纤维 + 阳极钛 + 金色关节，能量玻璃缓冲锁，合金装甲 + 格栅 + 金徽标 + 绿色能量环刻度 + 悬浮稳定环。
+- **还没做**：邻居 / 远景简化版（旗舰 651 件，上场景前要做 LOD）；接进 04 发射区（皮肤替换发射台 + 支架）；价格与权益。
+- **11-25 第二、三轮（用户反馈）**：
+  - 自发光太多、颜色都一样 → 发光体积砍掉约七成，灯带 / 关节光圈 / 台面环全部改细线；能量玻璃本身不发光，只留细发光边框。
+  - 参考用户给的《mini war》神圣级以上工厂 / 军事建筑截图：深色枪灰机体 + 细缝 / 菱形光点 / 窗格发光；**每套一种标志发光色**（中级青 #36D8FF、进阶红 #FF3040、高阶品红 #C844FF、旗舰金 #FFB82E）+ 白热核心，由 `applyHue` 统一刷色；台心加能量核心（白热盘 + 两道细环 + 上升粒子）；臂上加棱锥尖刺；进阶 / 高阶加四角尖顶塔，旗舰加四座窗格高塔 + 尖刺冠，等级越高越像纪念碑；引导光柱改用本套颜色。原画配色降为涂装点缀。
+  - 现零件：中级 235 / 进阶 349 / 高阶 380 / 旗舰 839（Neon 15 / 55 / 87 / 251，旗舰多为窗格小件）。
+- **11-25 第四轮（用户提议在第 3、4 套臂 / 夹爪上加助推器火焰）**：采纳但改成「姿态推进器」——支架不飞，大火焰会和火箭自己的尾焰抢戏。高阶夹头背面 2 个、旗舰锁体背壳 2 个（大一号）小喷口：金属喷管 + 本色焰锥 + 火焰粒子（白热 → 本色），平时待机；接口 `S.setThrusters(bracket, power)`（0 熄火 / 0.4 待机默认 / 1 接住瞬间全开）。另加磁吸面板火花（MagSparks）、旗舰塔顶余烬（Embers）。验收台上第 3、4 套推进器全开。
+- **11-25 第五轮（用户要求第 3、4 套底座底部加特效，参考图是底座四周喷火）**：`baseFlames()` 底座喷焰环：底座外沿一圈贴地喷口（高阶 12 个 / 旗舰 16 个），火焰朝外略向上（12°），颜色白热 → 本色 → 暗尾；地面光晕（GroundGlow：底座外 2.6 格半透明本色环 + 一道亮细环）；上升火星（BaseEmbers）。喷焰强度挂在 `S.setThrusters` 上，接住时和推进器一起变旺。参数在皮肤的 `baseFx = { r, n, size, bright }`：品红火焰叠在紫色地面上会洗成淡紫烟，所以高阶 size 1.35、Brightness 3，旗舰 size 1.25、Brightness 1.5。已知：验收台上高阶和旗舰相邻，两圈火交界处叠加发白；正式放进家园时不会相邻。
+
