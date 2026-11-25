@@ -14,7 +14,7 @@ local CS = game:GetService("CollectionService")
 
 local SD = {}
 SD.FACE = { hex("FFE680"), hex("FFC24A") }
-SD.GLOW = hex("FFD27A")
+SD.GLOW = hex("FFF0B8") -- 浅色高透明，避免叠在夜空上发褐
 
 -- 三角面：两块 WedgePart（经典做法），thickness = 面厚
 local function triangle(a, b, c, props, parent, thickness)
@@ -57,7 +57,7 @@ function SD.build(cf, r, parent)
 	glow.Adornee = core
 	glow.Radius = r * 2.2
 	glow.Color3 = SD.GLOW
-	glow.Transparency = 0.82
+	glow.Transparency = 0.88
 	glow.AlwaysOnTop = false
 	glow.ZIndex = 0
 	glow.Parent = core

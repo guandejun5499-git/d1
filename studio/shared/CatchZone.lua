@@ -2,7 +2,7 @@
 	CatchZone · 发射台接住区光柱（ReplicatedStorage.OrbitShared.CatchZone）
 	返航后段在发射台上升起半透明光柱：底部绿区 = 完美窗口（高度随支架等级变高），上方黄区 = 良好；
 	火箭底部一圈白色光环，进入黄区变黄、进入绿区变绿。Web Demo 半径 3.3。
-	用 CylinderHandleAdornment（InnerRadius 做空心筒 / 圆环）：无零件、不受光照，像全息光。
+	用 CylinderHandleAdornment（光柱实心、圆环用 InnerRadius）：无零件、不受光照，像全息光。
 	Z.build(deckCF, parent)：deckCF = 发射台台面中心；默认隐藏。
 	Z.set(zone, { visible, green, yellow, base, state })：green / yellow = 两段顶部高度（离台面），
 	base = 火箭底部高度，state = "none" | "yellow" | "green"（决定底环颜色和光柱闪亮）。
@@ -47,8 +47,9 @@ function Z.build(deckCF, parent)
 	local m = B.model("CatchZone")
 	local anchor = B.part({ Name = "ZoneAnchor", Size = Vector3.new(0.2, 0.2, 0.2), CFrame = deckCF, Transparency = 1, CastShadow = false }, m)
 	B.deco(anchor)
-	adorn(anchor, "GreenColumn", Z.R, Z.R - 0.06, 1, Z.GREEN, 0.78)
-	adorn(anchor, "YellowColumn", Z.R, Z.R - 0.06, 1, Z.YELLOW, 0.8)
+	-- 光柱用实心圆柱（InnerRadius = 0）：细壁高筒会在屏幕上画出横贯全屏的细线（11-24 实测）
+	adorn(anchor, "GreenColumn", Z.R, 0, 1, Z.GREEN, 0.78)
+	adorn(anchor, "YellowColumn", Z.R, 0, 1, Z.YELLOW, 0.8)
 	adorn(anchor, "GreenRing", Z.R + 0.14, Z.R - 0.12, 0.22, Z.GREEN, 0.1)
 	adorn(anchor, "YellowRing", Z.R + 0.14, Z.R - 0.12, 0.22, Z.YELLOW, 0.1)
 	adorn(anchor, "BaseRing", 2.6, 2.2, 0.22, Z.WHITE, 0.05)

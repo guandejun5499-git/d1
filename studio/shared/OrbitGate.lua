@@ -19,9 +19,9 @@ local G = {}
 G.FEVER_SCALE = 1.6
 G.SEGS = 24
 G.COLORS = {
-	normal = { tube = hex("FFC93C"), edge = hex("FFB000"), glow = hex("FFCC33"), dot = hex("FFF1B8") },
-	boost = { tube = hex("B98CFF"), edge = hex("A46BFF"), glow = hex("C9A6FF"), dot = hex("F0E2FF") },
-	fever = { tube = hex("FFC93C"), edge = hex("FFB000"), glow = hex("FFCC33"), dot = hex("FFFFFF") },
+	normal = { tube = hex("FFC93C"), edge = hex("FFB000"), glow = hex("FFF3C8"), dot = hex("FFF1B8") },
+	boost = { tube = hex("B98CFF"), edge = hex("A46BFF"), glow = hex("EADFFF"), dot = hex("F0E2FF") },
+	fever = { tube = hex("FFC93C"), edge = hex("FFB000"), glow = hex("FFF3C8"), dot = hex("FFFFFF") },
 	locked = { tube = hex("6E6A8C"), edge = hex("8C84B8"), glow = hex("8C84B8"), dot = hex("8C84B8") },
 }
 
@@ -74,8 +74,8 @@ function G.build(cf, R, parent, name)
 	local core = B.part({ Name = "GateCore", Size = V(0.3, 0.3, 0.3), CFrame = cf, Transparency = 1, CastShadow = false }, m)
 	B.deco(core)
 	adorn(core, "Edge", R - t * 0.42, R - t * 0.62, t * 0.5, col.edge, 0.05)
-	adorn(core, "Glow", R + t * 1.5, R + t * 0.55, 0.06, col.glow, 0.8)
-	adorn(core, "GlowOuter", R + t * 3.2, R + t * 1.5, 0.05, col.glow, 0.9)
+	adorn(core, "Glow", R + t * 1.5, R + t * 0.55, 0.06, col.glow, 0.88) -- 光晕用浅色 + 高透明：Roblox 是普通混合，饱和金色叠在夜空上会发褐
+	adorn(core, "GlowOuter", R + t * 3.2, R + t * 1.5, 0.05, col.glow, 0.94)
 	-- 虚线目标框：门外沿一圈 16 段短弧
 	local n = 16
 	for i = 0, n - 1 do

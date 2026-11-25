@@ -30,7 +30,7 @@ local PAD_EQ = {
 -- 回收支架等级：自家首航 L1；邻居各不相同（L1–L4 都能在场景里看到）
 local ARM_LEVEL = { 1, 2, 1, 4, 3, 2 }
 -- 邻居简化版删掉的细节件
-local LITE_DROP = { Hazard = true, Dash = true, Grate = true, FrameBoard = true, ArmPlate = true }
+local LITE_DROP = { Hazard = true, Dash = true, Grate = true, FrameBoard = true, ArmPlate = true, Rivet = true, Tooth = true, Hose = true, Groove = true, HoloRing = true } -- 后几项是 L3 / L4 支架的小零件，远看不出
 
 local function build(K, LITE)
 	local HOME_COLOR = B.homeColor(K)
