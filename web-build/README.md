@@ -40,6 +40,9 @@ Any static host works, because the game is just HTML.
 | Jump | Space | Jump button |
 | Look around | Drag, scroll to zoom | Drag the screen |
 | Use a machine | E (or click the prompt) | Tap the prompt |
+| Roll parts (free) | E at the Roll button in front of the part pads | Tap the prompt |
+| Buy a part | E at a part pad, or BUY in the roll results | Tap the prompt or BUY |
+| Backpack | Backpack button (top left) | Same |
 | Ignite | Hold Space or the button, release in the green | Hold and release the button |
 | Super Launch | Keep holding through two swings, release in the rainbow zone | Same |
 | BOOST at a gate | Space, click or tap anywhere when the ring meets the dashed gate outline (third beep) | Tap anywhere |
@@ -48,7 +51,7 @@ Any static host works, because the game is just HTML.
 
 ## What's in this build
 
-**Core loop:** roll parts → build in the glass Assembly Bay → ignite → fly gate-timed orbits → catch the landing → collect. Four part slots (nose, tank, engine, fins) × three tiers; the combination sets Δv, and only the right builds reach Jupiter.
+**Core loop:** press the Roll button (free, no cooldown) → each of the four part pads shows one part, with its name, rarity and price floating above it → buy the parts you want (they go to your backpack) → stage parts from the backpack into the four slots of the glass Assembly Bay → press Assemble → ignite → fly gate-timed orbits → catch the landing → collect. Four part slots (nose, tank, engine, fins) × three tiers; the combination sets Δv, and only the right builds reach Jupiter.
 
 **Stage-1 high-impact features**
 
@@ -61,9 +64,15 @@ Any static host works, because the game is just HTML.
 
 Gate timing windows (PERFECT): ±0.18 s with Basic Fins, ±0.22 s Swept, ±0.27 s Grid. A short beep at 0.6 s and 0.3 s before each gate and a chime on the beat help with timing.
 
+**Part prices (coins):** Aero Nose 40, Golden Nose 150, Large Tank 50, Mega Tank 180, Turbo Engine 60, Plasma Engine 220, Swept Fins 30, Grid Fins 100. Basic parts are unlimited and never sold. The first roll after the maiden flight gives the Large Tank for free.
+
+**Backpack and staging:** the same part stacks in one cell (duplicates only add to the count). Staging a part takes it out of the backpack; ✕ or a swap puts it back. The rocket on the pad stays flyable until you assemble a new one.
+
+**Roll pity:** each pad counts on its own. A pad that goes 10 rolls without an Elite is due; each roll, a random 1–2 of the due pads are guaranteed an Elite.
+
 ## Testing tools
 
-- **Wrench (top left):** skips the tutorial, unlocks every part and equips the best Jupiter build (Aero Nose, Mega Tank, Plasma Engine, Swept Fins). Build it in the Assembly Bay to fly it.
+- **Wrench (top left):** skips the tutorial, adds one of every Advanced and Elite part to the backpack and stages the best Jupiter build (Aero Nose, Mega Tank, Plasma Engine, Swept Fins). Assemble it in the bay to fly it.
 - **Reset (top left, tap twice):** clears saved progress so the tutorial, the first Super Launch hint and the Jupiter unlock reveal play again.
 
 Progress is saved in the browser's local storage, separately for each site the game is hosted on.

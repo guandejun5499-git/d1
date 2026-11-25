@@ -180,6 +180,33 @@ body{margin:0;background:var(--space);color:var(--ink);font-family:var(--body);f
 .delta{font-family:var(--display);font-size:20px;color:var(--green)}
 .delta.neg{color:var(--red)}
 .mrow{display:flex;gap:10px}
+.mcard.wide{width:min(760px,100%)}
+.capsules{display:flex;gap:14px;justify-content:center}.capsules .capsule{width:72px;height:72px}
+.r4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:600px){.r4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.r4c{background:#11163a;border:3px solid var(--outline);border-radius:12px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.r4c.on{border-color:var(--green)}
+.r4c .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.r4c .tierbadge{font-size:12px;padding:1px 8px}
+.r4c .pn{font-family:var(--display);font-size:15px;line-height:1.1}
+.r4c .newtag{font-size:12px;padding:0 8px}
+.r4c .sd{font-size:12px;color:var(--gold)}
+.r4c .pt{font-size:11px;font-weight:800;color:#ffcc33}
+.btn.sm{font-size:13px;padding:6px 8px;align-self:stretch}
+.slotw{position:relative}.slotw .slot{width:100%}
+.slot.empty{border-style:dashed;opacity:.85}
+.xslot{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:9px;border:3px solid var(--outline);background:#3a2340;color:#ffb3c1;font:inherit;font-weight:900;cursor:pointer;padding:0}
+.opts .bagh{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:2px 4px}
+.qty{margin-left:6px;color:var(--gold);font-variant-numeric:tabular-nums}
+.bagrow{display:flex;flex-direction:column;gap:6px}
+.bagrow .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.bagcells{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.bagcell{background:#11163a;border:3px solid var(--outline);border-radius:12px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
+.bagcell.empty{opacity:.45}
+.bagcell .pn{font-family:var(--display);font-size:14px;line-height:1.1}
+.bagcell .tierbadge{font-size:11px;padding:0 6px}
+.bagcell .sd{font-size:11px;color:var(--gold)}
+#bagBtn.bump{animation:burst .5s ease}
 .mrow .btn{flex:1;font-size:20px;padding:12px}
 .tl{display:flex;flex-direction:column;gap:6px;text-align:left}
 .tline{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;background:#11163a;border:2px solid var(--outline);border-radius:10px;padding:6px 10px;opacity:0;transform:translateX(-12px);transition:opacity .25s,transform .25s}
@@ -299,6 +326,7 @@ body.asm #plist,body.asm #tl .tools{display:none}
   <div class="pill" id="coinPill"><svg class="coinico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#ffcc33" stroke="#0d1029" stroke-width="2.5"/><circle cx="12" cy="12" r="5.2" fill="none" stroke="#d08e00" stroke-width="2.5"/></svg><span id="coinNum" class="ol-s" aria-label="Coins">0</span></div>
   <div class="pill" id="jup"></div>
   <div class="tools">
+    <button class="iconbtn" id="bagBtn" aria-label="Open backpack" title="Backpack"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7M5 9.5A2.5 2.5 0 0 1 7.5 7h9A2.5 2.5 0 0 1 19 9.5V19a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2zM9 13h6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <button class="iconbtn" id="muteBtn" aria-label="Mute sound"></button>
     <button class="iconbtn" id="resetBtn" aria-label="Reset progress"></button>
     <button class="iconbtn" id="giveBtn" aria-label="Testing: load the best Jupiter build" title="Testing: load the best Jupiter build"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4a4.5 4.5 0 0 0-4.3 5.8L4 16l4 4 6.2-6.2A4.5 4.5 0 0 0 20 9.5l-2.6 2.6-3-.6-.6-3L16.4 5.9A4.5 4.5 0 0 0 14.5 4z" fill="#fff" stroke="#0d1029" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
@@ -336,6 +364,7 @@ body.asm #plist,body.asm #tl .tools{display:none}
 
 <aside id="asmPanel" hidden aria-label="Assembly Bay"><div id="asmCard"></div></aside>
 <div class="modal" id="rollModal" hidden><div class="mcard" id="rollCardM"></div></div>
+<div class="modal" id="bagModal" hidden><div class="mcard wide" id="bagCard"></div></div>
 <div class="modal" id="tallyModal" hidden><div class="mcard" id="tallyCard"></div></div>
 <div class="modal" id="unlockOv" hidden><div class="ucard">
   <div class="rays"></div><div class="uplanet"><i></i></div>
@@ -388,28 +417,36 @@ const FRAMES=[
   {name:'Heavy Frame',bonus:55,win:0.28,cost:320,color:'#ff8a2e',arm:8},
   {name:'Starlight Frame',bonus:110,win:0.36,cost:null,color:'#ffd43d',arm:9.5}
 ];
-const ROLL_COST=20, PITY_MAX=10, ODDS=[55,35,10];
+const ROLL_LOCK=1.3, PITY_MAX=10, ODDS=[55,35,10]; // free roll, no cooldown (input is only locked during the ~1.2 s reveal); one offer per pad; each pad keeps its own pity counter
+const PRICES={nose:[0,40,150],tank:[0,50,180],engine:[0,60,220],fins:[0,30,100]}; // Basic parts are unlimited and never sold
 // Δv budget: reaching the Moon costs 150, each Moon orbit 120; the Jupiter route (1 Moon orbit + transfer + 1 Jupiter orbit) needs 900, each extra Jupiter orbit 200
 const DV_MOON=150, DV_MORB=120, DV_JUP=900, DV_JORB=200, MAX_MOON=5, MAX_JUP=3, DV_SCALE=1300;
 const WIN_P=[0.18,0.22,0.27], GREAT_PAD=0.18, GATE_OK=0.5, INPUT_LAG=0.04;
 const JUDGE={perfect:{m:2,l:'PERFECT!',c:'#ffcc33'},great:{m:1.5,l:'GREAT!',c:'#7cc0ff'},ok:{m:1.2,l:'OK',c:'#e5e9f5'},miss:{m:1,l:'ORBIT',c:'#e5e9f5'}};
 // home layout (design doc: pad at the front facing the plaza, assembly bay right, roller near both, shop slots left)
-const PAD=V(0,1,-20), ASM=V(22,0,2), ROLLER=V(21,0,-21), FRAMEBOARD=V(-12,0,-27), SPAWN=V(8,0,9);
-const LIFT=V(22,1.2,2), DOOR=V(14.4,0.55,2), CONV_B=V(4.6,0.55,-15.6);
+// home layout (23 Nov): pad top, assembly bay right, spawn centre facing the pad, roll button + one part pad per slot at the bottom, shops left
+const PAD=V(0,1,-20), ASM=V(26,0,-5), ROLLBTN=V(2,0,9), ROLLER=V(3,0,19), FRAMEBOARD=V(-9.5,0,-16.5), SPAWN=V(0,0,-5);
+const LIFT=V(26,1.2,-5), DOOR=V(18.4,0.55,-5), CONV_B=V(6.2,0.55,-14.6);
+const PEDS={};SLOTS.forEach((sl,i)=>{PEDS[sl]=V(ROLLER.x+((SLOTS.length-1)/2-i)*6.2,0,ROLLER.z);}); // 11-24: reversed so the player facing +Z reads nose → fins left to right
 const PLAZA=V(0,0,-110), PLOT_D=110, PLOT_R=42, PLAZA_R=46;
 const NEIGHBORS=['Nova_Kid','Kiwi2013','AstroBean','Pixel_Pilot','Rocketeer77'];
 const NCOL=['#ff5e7a','#ffb33d','#a46bff','#2fd3c8','#ff8ad8'];
 
 /* ================= state ================= */
-const SAVE_KEY='orbit-roll-3d-v2';
-function freshState(){return{coins:0,owned:{nose:[1,0,0],tank:[1,0,0],engine:[1,0,0],fins:[1,0,0]},equip:{nose:0,tank:0,engine:0,fins:0},frame:1,pity:0,rolls:0,tutorial:0,flights:0,best:0,bestDv:0,reachedJup:false,sawJup:false,muted:false,catchStreak:0,bestCatch:0};}
+const SAVE_KEY='orbit-roll-3d-v3';
+function freshState(){return{coins:0,owned:{nose:[1,0,0],tank:[1,0,0],engine:[1,0,0],fins:[1,0,0]},equip:{nose:0,tank:0,engine:0,fins:0},inv:{nose:[0,0,0],tank:[0,0,0],engine:[0,0,0],fins:[0,0,0]},built:null,frame:1,pity:0,pity4:{nose:0,tank:0,engine:0,fins:0},rolls:0,tutorial:0,flights:0,best:0,bestDv:0,reachedJup:false,sawJup:false,muted:false,catchStreak:0,bestCatch:0};}
 let state=freshState();
 try{const raw=localStorage.getItem(SAVE_KEY);if(raw){const s=JSON.parse(raw);if(s&&s.tutorial>=4)state=Object.assign(freshState(),s);}}catch(e){}
 function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));}catch(e){}}
 // tutorial: 0 assemble, 1 ignite, 2 boost, 3 catch, 4 free roll, 5 re-assemble, 6 launch again, 7 done
 let mode='explore'; // explore | assembly | assembling | ignite | flight | landed | tally
 let F=null, hold=null, selSlot=null, asmBusy=false, rollShake=0, padClamp=0, shake=0, asmAnim=null, flashI=0, doorOpen=0;
-const rk={equip:state.tutorial>=4?{...state.equip}:null,onPad:state.tutorial>=4,group:null,move:null};
+// state.equip = the staged loadout in the Assembly Bay (-1 = empty slot); state.inv = backpack counts (Basic is unlimited);
+// state.built = the rocket currently on the pad (independent of the staged loadout)
+const rk={equip:state.built?{...state.built}:null,onPad:!!state.built,group:null,move:null};
+const fullEq=eq=>SLOTS.every(sl=>eq[sl]>=0);
+const missingSlots=eq=>SLOTS.filter(sl=>eq[sl]<0);
+const invCount=(sl,t)=>t===0?Infinity:(state.inv[sl][t]||0);
 
 /* ================= helpers ================= */
 const clamp01=v=>Math.max(0,Math.min(1,v));
@@ -433,7 +470,7 @@ function planFor(eq){
   return Object.assign(m,{legs,fail});
 }
 const reachesJup=p=>p.legs.some(l=>l.body==='jupiter');
-function starMult(eq){let s=0;SLOTS.forEach(sl=>{s+=Math.max(0,state.owned[sl][eq[sl]]-1);});return 1+0.05*s;}
+function starMult(eq){return 1;} // duplicates only add quantity in the backpack (no star bonus)
 function orbitValue(body,k,eq){return BODIES[body].base*PARTS.nose.items[eq.nose].mult*starMult(eq)*(1+0.5*k);}
 function estimate(eq){const p=planFor(eq);let k=0,sum=0;p.legs.forEach(l=>{for(let i=0;i<l.orbits;i++)sum+=orbitValue(l.body,k++,eq);});return{orbit:Math.round(sum),plan:p,orbits:k};}
 const FAIL_TXT={heavy:"Can't lift off",short:"Can't reach orbit"};
@@ -611,7 +648,7 @@ function buildArms(){while(armsGroup.children.length)armsGroup.remove(armsGroup.
     box(0.9,fr.arm,0.9,fr.color,0,fr.arm/2,0,a);box(1.8,0.7,0.9,fr.color,-sd*0.9,fr.arm-0.35,0,a);
     if(state.frame===4)sph(0.4,'#fff6c4',0,fr.arm+0.4,0,a,{emissive:new THREE.Color('#ffd43d'),emissiveIntensity:1});}}
 buildArms();
-const tw=V(-9.5,0,-14);box(1.6,17,1.6,'#5d6bb0',tw.x,8.5,tw.z);for(let y=2;y<17;y+=3)box(2.4,0.35,2.4,'#3a4580',tw.x,y,tw.z);
+const tw=V(-9,0,-29);box(1.6,17,1.6,'#5d6bb0',tw.x,8.5,tw.z);for(let y=2;y<17;y+=3)box(2.4,0.35,2.4,'#3a4580',tw.x,y,tw.z);
 box(5.5,0.5,0.8,'#3a4580',tw.x+3,13,tw.z-2.6);
 const towerLight=sph(0.6,'#ff4f5e',tw.x,17.6,tw.z,null,{emissive:new THREE.Color('#ff2030'),emissiveIntensity:1});obstacles.push({x:tw.x,z:tw.z,r:1.8});
 
@@ -638,17 +675,32 @@ obstacles.push({x:ASM.x,z:ASM.z,r:8.4});
  const cg=new THREE.Group();cg.position.set(mid.x,0,mid.z);cg.rotation.y=Math.atan2(d.x,d.z);scene.add(cg);
  box(3.4,0.45,len,'#232a55',0,0.22,0,cg);for(let z=-len/2+1;z<len/2;z+=2.2)box(3,0.06,0.5,'#ffcc33',0,0.47,z,cg);}
 
-/* roller */
-const rollG=new THREE.Group();rollG.position.copy(ROLLER);scene.add(rollG);
-box(6,5,6,'#ff5e7a',0,2.5,0,rollG);box(3.2,1.4,0.3,'#2a2f5c',0,2,3.05,rollG);box(6.4,0.6,6.4,'#c43d58',0,5.1,0,rollG);
-const dome=new THREE.Mesh(new THREE.SphereGeometry(2.8,20,12,0,TAU,0,Math.PI/2),new THREE.MeshStandardMaterial({color:'#bfe6ff',transparent:true,opacity:0.32,roughness:0.1}));dome.position.y=5.4;rollG.add(dome);
-const caps=[];['#ffc53d','#3ea0ff','#d5dbe6','#3ea0ff','#d5dbe6','#d5dbe6'].forEach((c,i)=>{const s=sph(0.75,c,Math.cos(i)*1.2,6+((i%3)*0.4),Math.sin(i*1.7)*1.1,rollG);s.userData.p=i;caps.push(s);});
-obstacles.push({x:ROLLER.x,z:ROLLER.z,r:4.4});
+/* roll pads: one per part slot, plus the roll button in front */
+const peds={};
+SLOTS.forEach((sl,i)=>{const p=PEDS[sl];const g=new THREE.Group();g.position.copy(p);scene.add(g);
+  cyl(2.3,2.6,1.2,16,'#2e3247',0,0.6,0,g);cyl(1.9,1.9,1.4,16,'#f4f6fb',0,1.9,0,g);
+  const ring=cyl(2.0,2.0,0.32,16,'#b8c2d1',0,2.5,0,g);ring.material=ring.material.clone();
+  const cap=new THREE.Group();cap.position.y=3.6;g.add(cap);
+  const c1=new THREE.Mesh(new THREE.SphereGeometry(0.95,16,10,0,TAU,0,Math.PI/2),M('#ff7a1a'));c1.castShadow=true;cap.add(c1);
+  const c2=new THREE.Mesh(new THREE.SphereGeometry(0.95,16,10,0,TAU,Math.PI/2,Math.PI/2),M('#f4f6fb'));c2.castShadow=true;cap.add(c2);
+  const disp=new THREE.Group();disp.position.y=3.3;g.add(disp);
+  peds[sl]={g,ring,cap,disp,tier:-1,i};obstacles.push({x:p.x,z:p.z,r:2.8});});
+function setPedPart(sl,tier){const P_=peds[sl];while(P_.disp.children.length)P_.disp.remove(P_.disp.children[0]);P_.tier=tier;
+  if(tier===-2){P_.ring.material.color.set('#5a5f86');P_.ring.material.emissiveIntensity=0;}if(tier<0)return;
+  const eq={nose:0,tank:0,engine:0,fins:0};eq[sl]=tier;const r=makeRocket(eq),pp=r.userData.parts;let part;
+  if(sl==='fins'){part=new THREE.Group();pp.fins.slice().forEach(f=>{r.remove(f);part.add(f);});part.position.y=-0.7;}
+  else{part=pp[sl];r.remove(part);part.position.set(0,0,0);}
+  part.scale.setScalar(sl==='tank'?0.36:0.5);P_.disp.add(part);
+  const c=TIER_COL[tier].f;P_.ring.material.color.set(c);P_.ring.material.emissive=new THREE.Color(c);P_.ring.material.emissiveIntensity=tier?0.7:0.25;}
+const rbG=new THREE.Group();rbG.position.copy(ROLLBTN);scene.add(rbG);
+cyl(1.7,2.0,1.4,16,'#2e3247',0,0.7,0,rbG);cyl(1.3,1.3,0.5,16,'#f4f6fb',0,1.65,0,rbG);
+const rollKnob=cyl(1.05,1.15,0.6,20,'#ff7a1a',0,2.2,0,rbG);rollKnob.material=M('#ff7a1a',{emissive:new THREE.Color('#ff5a00'),emissiveIntensity:0.35}).clone();
+obstacles.push({x:ROLLBTN.x,z:ROLLBTN.z,r:2.1});
 /* frame board */
 const fb=new THREE.Group();fb.position.copy(FRAMEBOARD);scene.add(fb);box(0.6,4,0.6,'#2f365f',0,2,0,fb);
 const fbBoard=box(5.2,2.6,0.5,FRAMES[state.frame-1].color,0,4.8,0,fb);fbBoard.material=fbBoard.material.clone();obstacles.push({x:FRAMEBOARD.x,z:FRAMEBOARD.z,r:1.4});
 /* shop slots (reserved per design doc) */
-const SHOPS=[V(-26,0,-12),V(-26,0,0),V(-26,0,12)];
+const SHOPS=[V(-24,0,-12),V(-24,0,0),V(-24,0,12)];
 SHOPS.forEach(p=>{cyl(3,3.3,1.2,8,'#3a4580',p.x,0.6,p.z);box(2,2,2,'#6b7497',p.x,2.2,p.z);obstacles.push({x:p.x,z:p.z,r:3.4});});
 {const st=makeRocket({nose:1,tank:2,engine:2,fins:0});st.scale.setScalar(1.6);st.position.set(PLAZA.x,2,PLAZA.z);scene.add(st);}
 
@@ -656,10 +708,10 @@ SHOPS.forEach(p=>{cyl(3,3.3,1.2,8,'#3a4580',p.x,0.6,p.z);box(2,2,2,'#6b7497',p.x
 const neighbors=[];
 plots.forEach(p=>{if(p.home)return;const i=p.idx-1;const pad=p.c.clone().addScaledVector(p.dir,-20);pad.y=1;
   cyl(7,7.6,1,24,'#2f365f',pad.x,0.5,pad.z);
-  const side=V(p.dir.z,0,-p.dir.x);const a=p.c.clone().addScaledVector(side,-20).addScaledVector(p.dir,-2);const ag=new THREE.Group();ag.position.copy(a);ag.rotation.y=Math.atan2(p.dir.x,p.dir.z);scene.add(ag);
+  const side=V(p.dir.z,0,-p.dir.x);const a=p.c.clone().addScaledVector(side,26).addScaledVector(p.dir,-5);const ag=new THREE.Group();ag.position.copy(a);ag.rotation.y=Math.atan2(p.dir.x,p.dir.z);scene.add(ag);
   box(10,0.8,10,'#2f365f',0,0.4,0,ag);[[-4.8,-4.8],[4.8,-4.8],[-4.8,4.8],[4.8,4.8]].forEach(q=>box(0.6,11,0.6,'#6e7cc4',q[0],5.5,q[1],ag));box(10.4,0.5,10.4,'#4a5390',0,11.2,0,ag);
   const gb=new THREE.Mesh(new THREE.BoxGeometry(9.6,10.2,9.6),glassMat);gb.position.y=5.9;gb.renderOrder=3;ag.add(gb);
-  const r=p.c.clone().addScaledVector(side,-18).addScaledVector(p.dir,-20);box(5,4.5,5,'#ff5e7a',r.x,2.25,r.z);
+  for(let j=0;j<4;j++){const r=p.c.clone().addScaledVector(side,3+(j-1.5)*6.2).addScaledVector(p.dir,19);cyl(2,2.3,2.4,12,'#f4f6fb',r.x,1.2,r.z);cyl(0.8,0.8,1.2,10,'#ff7a1a',r.x,3,r.z);}
   const eq={nose:Math.floor(Math.random()*3),tank:1+Math.floor(Math.random()*2),engine:1+Math.floor(Math.random()*2),fins:Math.floor(Math.random()*3)};
   const rocket=makeRocket(eq);rocket.position.copy(pad);scene.add(rocket);
   const n={name:NEIGHBORS[i],col:NCOL[i],pad,eq,rocket,path:null,t:0,timer:8+i*9+Math.random()*6,coins:300+Math.floor(Math.random()*1800),flights:3+Math.floor(Math.random()*20),plot:p};
@@ -712,7 +764,8 @@ function sparks(p,n,power){power=power||1;
 const labels={};let fontsOK=false;
 function buildLabels(){
   const add=(key,txt,col,h,x,y,z,sub)=>{if(labels[key])scene.remove(labels[key]);const s=textSprite(txt,col,h,sub);s.position.set(x,y,z);scene.add(s);labels[key]=s;};
-  add('roll','PART ROLLER','#ffffff',1.5,ROLLER.x,10.4,ROLLER.z);
+  add('roll','PART PADS','#ffffff',1.5,ROLLER.x,8.6,ROLLER.z,'All pads roll together');add('rbtn','ROLL','#ff7a1a',1.2,ROLLBTN.x,5,ROLLBTN.z);
+  SLOTS.forEach(sl=>add('ped'+sl,PARTS[sl].label.toUpperCase(),'#cfd5ee',0.75,PEDS[sl].x,1.7,PEDS[sl].z+2.9));
   add('asm','ASSEMBLY BAY','#ffffff',1.6,ASM.x,20.4,ASM.z);
   add('pad','LAUNCHPAD','#ffcc33',1.4,PAD.x,1.6,PAD.z+8.6);
   updateFrameLabel();
@@ -781,7 +834,7 @@ function doJump(){if(mode!=='explore'||anyModal())return;if(player.onGround){pla
 let hintHidden=false;function hideHintSoon(){if(hintHidden)return;hintHidden=true;setTimeout(()=>{$('#hint').style.opacity=0;},6000);}
 if(isTouch)$('#hint').innerHTML='Left stick to move · drag to look · tap prompts to interact';
 
-function anyModal(){return !$('#rollModal').hidden||!$('#tallyModal').hidden;}
+function anyModal(){return !$('#rollModal').hidden||!$('#tallyModal').hidden||!$('#bagModal').hidden;}
 
 /* ================= movement & collision ================= */
 function walkable(x,z){
@@ -821,8 +874,10 @@ function updatePlayer(dt){
 /* ================= prompts ================= */
 const PROMPTS=[
   {id:'asm',x:ASM.x,z:ASM.z,r:12.5,y:19,obj:'Assembly Bay',act:()=>asmBusy?'Working…':'Open',ok:()=>!asmBusy,run:openAsm},
-  {id:'pad',x:PAD.x,z:PAD.z,r:12,y:6,obj:'Launchpad',act:()=>ready()?'Ignite':(asmBusy?'Rocket on the way…':(rk.onPad?'Rebuild in the Assembly Bay first':'Build a rocket first')),ok:()=>ready(),run:startIgnite},
-  {id:'roll',x:ROLLER.x,z:ROLLER.z,r:8.5,y:9,obj:'Part Roller',act:()=>state.tutorial<4?'Unlocks after first flight':(state.tutorial===4?'Free Roll':`Roll · ${ROLL_COST} coins`),ok:()=>state.tutorial>=4&&!asmBusy,run:doRoll},
+  {id:'pad',x:PAD.x,z:PAD.z,r:12,y:6,obj:'Launchpad',act:()=>ready()?(fullEq(state.equip)&&!sameEq(rk.equip,state.equip)&&state.tutorial>=7?'Ignite · new build staged in the bay':'Ignite'):(asmBusy?'Rocket on the way…':'Build a rocket first'),ok:()=>ready(),run:startIgnite},
+  {id:'roll',x:ROLLBTN.x,z:ROLLBTN.z,r:7,y:4,obj:'Roll Button',act:()=>{if(state.tutorial<4)return'Unlocks after first flight';return rollWait()>0?'Rolling…':'Free roll · all pads';},ok:()=>state.tutorial>=4&&!asmBusy&&rollWait()===0,run:doRoll},
+  ...SLOTS.map(sl=>({id:'buy'+sl,x:PEDS[sl].x,z:PEDS[sl].z,r:4.4,y:6.5,obj:PARTS[sl].label+' pad',act:()=>{const o=offers[sl];if(!o)return'Press Roll first';if(o.sold)return'Sold · roll again';if(o.tier===0)return'Basic part · unlimited in your backpack';return`Buy ${PARTS[sl].items[o.tier].name} · ${PRICES[sl][o.tier]} coins`;},
+    ok:()=>{const o=offers[sl];return !!o&&!o.sold&&o.tier>0&&state.coins>=PRICES[sl][o.tier];},run:()=>buyOffer(sl)})),
   {id:'frame',x:FRAMEBOARD.x,z:FRAMEBOARD.z,r:6.5,y:7.5,obj:'Catch Frame',act:()=>{const f=FRAMES[state.frame-1];return state.tutorial<4?'Unlocks after first flight':(f.cost?`Upgrade · ${f.cost} coins`:'Max level');},ok:()=>state.tutorial>=4&&FRAMES[state.frame-1].cost&&state.coins>=FRAMES[state.frame-1].cost,run:upgradeFrame},
   ...SHOPS.map((p,i)=>({id:'shop'+i,x:p.x,z:p.z,r:5.5,y:5,obj:'Shop slot',act:()=>'Coming soon',ok:()=>false,run:()=>{}}))
 ];
@@ -846,10 +901,13 @@ let holo=null,holoKey='';
 function showHolo(on){
   if(!on){if(holo){bay.remove(holo);holo=null;holoKey='';}return;}
   const k=JSON.stringify(state.equip);if(holo&&k===holoKey)return;
-  if(holo)bay.remove(holo);holo=makeRocket(state.equip,true);holo.position.set(0,LIFT.y-ASM.y,0);bay.add(holo);holoKey=k;
+  if(holo)bay.remove(holo);const eq={};SLOTS.forEach(sl=>eq[sl]=Math.max(0,state.equip[sl]));holo=makeRocket(eq,false);
+  const pp=holo.userData.parts;SLOTS.forEach(sl=>{if(state.equip[sl]>=0)return;const objs=sl==='fins'?pp.fins:[pp[sl]];
+    objs.forEach(o=>o.traverse(m=>{if(m.isMesh){m.material=HOLO;m.castShadow=false;}}));});
+  holo.position.set(0,LIFT.y-ASM.y,0);bay.add(holo);holoKey=k;
 }
-function openAsm(){if(asmBusy)return;selSlot=null;mode='assembly';$('#asmPanel').hidden=false;showHolo(true);renderAsm();sfx.click();refresh();
-  if(reachesJup(planFor(state.equip))&&!state.sawJup){callout('JUPITER IN RANGE!','#ffb36b','Unlocking a new planet…');sfx.reveal(2);setTimeout(startReveal,1000);}}
+function openAsm(){if(asmBusy)return;selSlot=SLOTS.find(sl=>state.equip[sl]<0)||null;mode='assembly';$('#asmPanel').hidden=false;showHolo(true);renderAsm();sfx.click();refresh();
+  if(fullEq(state.equip)&&reachesJup(planFor(state.equip))&&!state.sawJup){callout('JUPITER IN RANGE!','#ffb36b','Unlocking a new planet…');sfx.reveal(2);setTimeout(startReveal,1000);}}
 function closeAsm(){$('#asmPanel').hidden=true;showHolo(false);if(mode==='assembly')mode='explore';refresh();cv.focus({preventScroll:true});}
 function statRow(label,val,frac,cls){return `<div class="srow"><span>${label}</span><span class="sbar"><i class="${cls||''}" style="width:${Math.round(clamp01(frac)*100)}%"></i></span><b>${val}</b></div>`;}
 function hintFor(p,eq){
@@ -864,45 +922,61 @@ function hintFor(p,eq){
   return `<p class="hintx">Jupiter needs Δv ${fmt(DV_JUP)}. You're <b>${fmt(DV_JUP-p.dv)}</b> short. ${tip}</p>`;
 }
 function renderAsm(){
-  const eq=state.equip,tut=state.tutorial,est=estimate(eq),p=est.plan;
+  const eq=state.equip,tut=state.tutorial,full=fullEq(eq),miss=missingSlots(eq);
+  const est=full?estimate(eq):null,p=full?est.plan:null;
   let slots='';
-  SLOTS.forEach(sl=>{const ti=eq[sl],it=PARTS[sl].items[ti],st=state.owned[sl][ti];
-    slots+=`<button class="slot tier${ti}${selSlot===sl?' sel':''}" data-act="slot:${sl}" ${tut<4?'disabled':''} aria-expanded="${selSlot===sl}"><span class="picon">${partSVG(sl,ti,34)}</span><span><div class="nm">${it.name}</div><div class="ds">${PARTS[sl].label} · ${it.desc}</div></span><span class="stars">${'★'.repeat(Math.min(st,5))}${st>5?'+':''}</span></button>`;
-    if(selSlot===sl)slots+='<div class="opts">'+PARTS[sl].items.map((o,i)=>{const own=state.owned[sl][i]>0;const alt=planFor({...eq,[sl]:i});const dd=alt.dv-p.dv;
-      const dvTxt=alt.fail?`<span class="dv down">${alt.fail==='heavy'?'Too heavy':'No orbit'}</span>`:`<span class="dv">Δv ${fmt(alt.dv)}${dd?` <span class="${dd>0?'up':'down'}">${dd>0?'+':''}${fmt(dd)}</span>`:''}</span>`;
-      return `<button class="opt${eq[sl]===i?' on':''}${reachesJup(alt)?' jup':''}" data-act="pick:${sl}:${i}" ${own?'':'disabled'}>${partSVG(sl,own?i:-1,30)}<span>${own?o.name:'Not rolled'}</span>${own?dvTxt:`<span style="color:var(--muted)">${TIER_NAMES[i]}</span>`}</button>`;}).join('')+'</div>';});
-  const jp=reachesJup(p),isReady=ready();
-  $('#asmCard').innerHTML=`<div class="ahead"><h3 class="ol">Assembly Bay</h3><button class="xbtn" data-act="close" aria-label="Close">✕</button></div>
-    ${tut===0?'<p class="note">Your <b>basic parts</b> are loaded. Press <b>Assemble</b> and watch them come together in the bay.</p>':'<p class="note">Tap a slot to swap parts. Each option shows how it changes your Δv.</p>'}
-    <div class="slots">${slots}</div>
-    <div class="perf">
+  SLOTS.forEach(sl=>{const ti=eq[sl];
+    if(ti<0)slots+=`<div class="slotw"><button class="slot empty${selSlot===sl?' sel':''}" data-act="slot:${sl}" ${tut<4?'disabled':''} aria-expanded="${selSlot===sl}"><span class="picon">${partSVG(sl,-1,34)}</span><span><div class="nm">Empty · ${PARTS[sl].label}</div><div class="ds">Pick a part from your backpack</div></span></button></div>`;
+    else{const it=PARTS[sl].items[ti];
+      slots+=`<div class="slotw"><button class="slot tier${ti}${selSlot===sl?' sel':''}" data-act="slot:${sl}" ${tut<4?'disabled':''} aria-expanded="${selSlot===sl}"><span class="picon">${partSVG(sl,ti,34)}</span><span><div class="nm">${it.name}</div><div class="ds">${PARTS[sl].label} · ${it.desc}</div></span></button>${tut>=4?`<button class="xslot" data-act="remove:${sl}" aria-label="Remove ${it.name} to backpack">✕</button>`:''}</div>`;}
+    if(selSlot===sl)slots+='<div class="opts"><div class="bagh">Backpack · '+PARTS[sl].label+'</div>'+PARTS[sl].items.map((o,i)=>{const n=invCount(sl,i),here=eq[sl]===i,can=here||n>0;
+      let dvTxt='';if(full||miss.length===1&&miss[0]===sl){const alt=planFor({...eq,[sl]:i});const dd=p?alt.dv-p.dv:0;
+        dvTxt=alt.fail?`<span class="dv down">${alt.fail==='heavy'?'Too heavy':'No orbit'}</span>`:`<span class="dv">Δv ${fmt(alt.dv)}${dd?` <span class="${dd>0?'up':'down'}">${dd>0?'+':''}${fmt(dd)}</span>`:''}</span>`;}
+      const qty=i===0?'∞':'×'+n;
+      return `<button class="opt${here?' on':''}" data-act="pick:${sl}:${i}" ${can?'':'disabled'}>${partSVG(sl,i,30)}<span>${o.name}<b class="qty">${here?'In slot':qty}</b></span>${can?dvTxt:`<span style="color:var(--muted)">Buy at the part pad</span>`}</button>`;}).join('')+'</div>';});
+  const onPad=rk.onPad&&rk.equip&&sameEq(rk.equip,eq);
+  let perf,btn;
+  if(!full){perf=`<p class="hintx">Staged ${SLOTS.length-miss.length}/${SLOTS.length}. Still missing: <b>${miss.map(m=>PARTS[m].label).join(', ')}</b>.</p>`;
+    btn=`<button class="btn grey" disabled>MISSING: ${miss.map(m=>PARTS[m].label.toUpperCase()).join(', ')}</button>`;}
+  else{const jp=reachesJup(p);
+    perf=`<div class="perf">
       <div class="kv"><span>Δv budget</span><b class="${jp?'jupc':''}" style="font-size:18px">${fmt(p.dv)}</b></div>
       <div class="dvbar"><div class="dvfill${jp?' jup':''}${p.fail?' bad':''}" style="width:${Math.min(100,p.dv/DV_SCALE*100)}%"></div><i class="tk" style="left:${(DV_MOON+DV_MORB)/DV_SCALE*100}%"><span>Moon</span></i><i class="tk j" style="left:${DV_JUP/DV_SCALE*100}%"><span>Jupiter</span></i></div>
       <p class="eqn">Ideal ${fmt(p.ideal)} − gravity ${fmt(p.grav)} − drag ${fmt(p.drag)} − steering ${fmt(p.steer)}</p>
       ${statRow('Thrust / weight',p.twr.toFixed(2),p.twr/3,p.twr<1?'bad':'')}
       ${statRow('Launch mass',p.wet.toFixed(1)+' t',p.wet/17,'')}
       ${statRow('Stability','×'+p.stab.toFixed(1),(p.stab-0.6)/1.2,'')}
-      ${statRow('Coin bonus','×'+(p.mult*starMult(eq)).toFixed(2),p.mult/2.4,'gold')}
+      ${statRow('Coin bonus','×'+p.mult.toFixed(2),p.mult/2.4,'gold')}
     </div>
     <div class="plan"><div class="kv"><span>Flight plan</span><b>Speed ×${p.speed} · gate window ±${p.win.toFixed(2)}s</b></div><div class="route">${routeHTML(p)}</div>
       ${p.fail?'':`<div class="kv"><span>Orbit coins (before timing bonuses)</span><b class="g">≈ ${fmt(est.orbit)}</b></div><div class="kv"><span>Recovery bonus</span><b class="g">+${FRAMES[state.frame-1].bonus}</b></div>`}</div>
-    ${hintFor(p,eq)}
-    <div class="mrow"><button class="btn ${isReady||p.fail?'grey':'green pulse'}" data-act="build" ${isReady||p.fail?'disabled':''}>${isReady?'ALREADY ON THE PAD':p.fail?'CAN’T FLY THIS BUILD':'ASSEMBLE'}</button></div>`;
+    ${hintFor(p,eq)}`;
+    btn=`<button class="btn ${onPad||p.fail?'grey':'green pulse'}" data-act="build" ${onPad||p.fail?'disabled':''}>${onPad?'ALREADY ON THE PAD':p.fail?'CAN’T FLY THIS BUILD':'ASSEMBLE'}</button>`;}
+  const intro=tut===0?'<p class="note">Your <b>basic parts</b> are already staged in the four slots. Press <b>Assemble</b> and watch them come together.</p>'
+    :'<p class="note">Staged parts wait here until you press <b>Assemble</b>. Tap a slot to open that page of your backpack; ✕ sends a part back.</p>';
+  $('#asmCard').innerHTML=`<div class="ahead"><h3 class="ol">Assembly Bay</h3><button class="xbtn" data-act="close" aria-label="Close">✕</button></div>
+    ${intro}<div class="slots">${slots}</div>${perf}<div class="mrow">${btn}</div>`;
 }
+function stagePart(sl,t){const cur=state.equip[sl];if(cur===t)return false;
+  if(t>0&&invCount(sl,t)<1)return false;
+  if(cur>0)state.inv[sl][cur]++;if(t>0)state.inv[sl][t]--;state.equip[sl]=t;return true;}
+function unstagePart(sl){const cur=state.equip[sl];if(cur<0)return;if(cur>0)state.inv[sl][cur]++;state.equip[sl]=-1;}
 $('#asmCard').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const a=b.dataset.act;ac();
   if(a==='close')closeAsm();
   else if(a==='build')startAssemble();
   else if(a.startsWith('slot:')){const s=a.slice(5);selSlot=selSlot===s?null:s;sfx.click();renderAsm();}
-  else if(a.startsWith('pick:')){const[,s,i]=a.split(':');if(state.equip[s]===+i)return;state.equip[s]=+i;save();showHolo(true);
+  else if(a.startsWith('remove:')){const s=a.slice(7);unstagePart(s);selSlot=s;save();showHolo(true);sfx.click();renderAsm();}
+  else if(a.startsWith('pick:')){const[,s,i]=a.split(':');if(!stagePart(s,+i))return;
+    const nxt=SLOTS.find(x=>state.equip[x]<0);selSlot=nxt||null;save();showHolo(true);
     sparks(LIFT.clone().add(V(0,5,0)),18,0.6);sfx.clang(0.5);renderAsm();
-    const p=planFor(state.equip);if(reachesJup(p)&&!state.sawJup&&!reveal){callout('JUPITER IN RANGE!','#ffb36b','Unlocking a new planet…');sfx.reveal(2);setTimeout(startReveal,1000);}}});
-function ready(){return rk.onPad&&!rk.move&&!asmBusy&&sameEq(rk.equip,state.equip);}
+    if(!fullEq(state.equip))return;const p=planFor(state.equip);if(reachesJup(p)&&!state.sawJup&&!reveal){callout('JUPITER IN RANGE!','#ffb36b','Unlocking a new planet…');sfx.reveal(2);setTimeout(startReveal,1000);}}});
+function ready(){return rk.onPad&&!rk.move&&!asmBusy;}
 function setRocket(eq){if(rk.group)scene.remove(rk.group);rk.group=eq?makeRocket(eq):null;if(rk.group)scene.add(rk.group);}
 function startAssemble(){
-  const p=planFor(state.equip);if(p.fail)return;
+  if(!fullEq(state.equip))return;const p=planFor(state.equip);if(p.fail)return;
   $('#asmPanel').hidden=true;showHolo(false);mode='assembling';asmBusy=true;sfx.build();
   if(rk.group&&rk.onPad){burst(PAD.clone().add(V(0,5,0)),40,'#c8cde6',14,0.9);rk.onPad=false;}
-  rk.equip={...state.equip};setRocket(rk.equip);const g=rk.group,ud=g.userData,P=ud.parts;g.position.copy(LIFT);
+  rk.equip={...state.equip};state.built={...state.equip};save();setRocket(rk.equip);const g=rk.group,ud=g.userData,P=ud.parts;g.position.copy(LIFT);
   const steps=[];
   const drop=(obj,off,t0,t1,impact,power,h)=>{const to=obj.position.clone();const from=to.clone().add(off);obj.position.copy(from);obj.visible=false;steps.push({obj,from,to,t0,t1,impact,power,h,done:false,top:off.y>0});};
   drop(P.engine,V(0,13,0),0.2,0.8,V(0,0.1,0),1.2,1+ud.engH);
@@ -1135,11 +1209,11 @@ function renderPlist(){
   el.innerHTML=`<button aria-expanded="${!plistCollapsed}"><span>Players ${plistCollapsed?'▾':'▴'}</span><span>Coins</span><span>Flights</span></button>`+rows.map(r=>`<div class="prow${r.me?' me':''}"><span class="nm"><i class="dot" style="background:${r.col}"></i>${r.name}</span><span>${fmt(r.coins)}</span><span>${r.flights}</span></div>`).join('');
   el.querySelector('button').onclick=()=>{plistCollapsed=!plistCollapsed;renderPlist();};
 }
-const TUT={0:['Step 1 of 4','Walk to the Assembly Bay and press E to build your rocket'],1:['Step 2 of 4','Walk to the Launchpad and press E to ignite'],2:['Maiden flight','Tap BOOST when the shrinking ring meets the dashed gate outline (on the third beep)'],3:['Landing','Tap CATCH (or anywhere) when the rocket\'s base enters the green zone'],4:['Your turn','Visit the Part Roller. Your first roll is free!'],5:['Your turn','Open the Assembly Bay, equip the Large Tank and watch your Δv climb'],6:['Your turn','Launch again. Watch for the 2nd-orbit combo!']};
+const TUT={0:['Step 1 of 4','Walk to the Assembly Bay and press E to build your rocket'],1:['Step 2 of 4','Walk to the Launchpad and press E to ignite'],2:['Maiden flight','Tap BOOST when the shrinking ring meets the dashed gate outline (on the third beep)'],3:['Landing','Tap CATCH (or anywhere) when the rocket\'s base enters the green zone'],4:['Your turn','Press E at the Roll button (always free). The tank pad has a gift for you!'],5:['Your turn','Open the Assembly Bay, put the Large Tank from your backpack into the tank slot, then Assemble'],6:['Your turn','Launch again. Watch for the 2nd-orbit combo!']};
 function renderTut(){let t=TUT[state.tutorial];if(state.tutorial===1&&mode==='ignite')t=['Step 3 of 4','Hold the button (or Space), release while the needle is in the green'];
   const el=$('#tut');if(!t||mode==='tally'){el.hidden=true;return;}el.hidden=false;el.innerHTML=`<small>${t[0]}</small>${t[1]}`;}
 function guideTarget(){const t=state.tutorial;if(mode!=='explore')return null;
-  if(t===0||t===5)return asmBusy?null:V(ASM.x,23,ASM.z);if(t===1||t===6)return ready()?V(PAD.x,22,PAD.z):null;if(t===4)return V(ROLLER.x,13,ROLLER.z);return null;}
+  if(t===0||t===5)return asmBusy?null:V(ASM.x,23,ASM.z);if(t===1||t===6)return ready()?V(PAD.x,22,PAD.z):null;if(t===4)return V(ROLLBTN.x,8,ROLLBTN.z);return null;}
 let actKey='';
 function currentAction(){
   if(mode==='ignite'){if(!hold)return{id:'ignite',label:'HOLD TO IGNITE',col:'red'};const st=hold.stage||0;
@@ -1170,6 +1244,7 @@ function updateFlightHud(){
   const fe=$('#fFever');fe.classList.toggle('pre',!F.fever);if(F.fever){fe.hidden=false;fe.textContent=`FEVER ×2 · ${F.feverCount||0}`;}else if(F.pstreak>0&&!F.landed){fe.hidden=false;fe.textContent=`FEVER ${F.pstreak}/${FEVER_NEED}`;}else fe.hidden=true;
   const se=$('#fStreak'),n=state.catchStreak||0,late=F.seg&&(F.seg.type==='return'||F.seg.type==='land');if(n>0&&late&&!F.landed){se.hidden=false;se.textContent=`Catch streak ${n} · next ×${streakMult(n+1).toFixed(2)}`;}else se.hidden=true;
 }
+$('#bagBtn').addEventListener('click',()=>{ac();sfx.click();openBag();});
 $('#muteBtn').addEventListener('click',()=>{state.muted=!state.muted;save();renderTop();});
 let resetArm=0;
 $('#resetBtn').addEventListener('click',()=>{const b=$('#resetBtn');
@@ -1179,9 +1254,9 @@ const BEST_BUILD={nose:1,tank:2,engine:2,fins:1};
 $('#giveBtn').addEventListener('click',()=>{
   if(!(mode==='explore'||mode==='assembly')||asmBusy){smallHint('Try again once the rocket is back');return;}
   if(state.tutorial<4)state.tutorial=7;
-  SLOTS.forEach(x=>{state.owned[x]=state.owned[x].map(v=>Math.max(1,v));});
-  Object.assign(state.equip,BEST_BUILD);save();
-  callout('BEST BUILD LOADED','#ffb36b','Aero · Mega · Plasma · Swept · build it in the Assembly Bay');sfx.reveal(2);
+  SLOTS.forEach(x=>{state.owned[x]=state.owned[x].map(v=>Math.max(1,v));unstagePart(x);state.inv[x][1]=Math.max(1,state.inv[x][1]);state.inv[x][2]=Math.max(1,state.inv[x][2]);stagePart(x,BEST_BUILD[x]);});
+  save();
+  callout('BEST BUILD STAGED','#ffb36b','Parts added to your backpack and staged · press Assemble in the bay');sfx.reveal(2);
   if(mode==='assembly'){showHolo(true);renderAsm();}refresh();});
 
 /* ================= frame upgrade ================= */
@@ -1190,40 +1265,73 @@ function upgradeFrame(){const fr=FRAMES[state.frame-1];if(!fr.cost||state.coins<
   burst(PAD.clone().add(V(0,5,0)),70,FRAMES[state.frame-1].color,22,1);sfx.reveal(1);callout('FRAME UPGRADED!','#ffcc33',FRAMES[state.frame-1].name+' · bonus +'+FRAMES[state.frame-1].bonus);refresh();}
 
 /* ================= roll ================= */
+function rollTier(){const r=Math.random()*100;return r<ODDS[2]?2:r<ODDS[2]+ODDS[1]?1:0;}
+const offers={};let rollCdUntil=0,lastOut=null;
+function rollWait(){return Math.max(0,Math.ceil((rollCdUntil-performance.now())/1000));}
 function doRoll(){
-  const free=state.tutorial===4;const cost=free?0:ROLL_COST;
-  if(state.coins<cost){sfx.bad();smallHint('Not enough coins');return;}
-  state.coins-=cost;state.rolls++;let slot,tier;
-  if(free){slot='tank';tier=1;}
-  else{state.pity++;const r=Math.random()*100;tier=r<ODDS[2]?2:r<ODDS[2]+ODDS[1]?1:0;if(state.pity>=PITY_MAX)tier=2;if(tier===2)state.pity=0;slot=SLOTS[Math.floor(Math.random()*SLOTS.length)];if(tier===2){const miss=SLOTS.filter(x=>!state.owned[x][2]);if(miss.length)slot=miss[Math.floor(Math.random()*miss.length)];}}
-  const prev=state.owned[slot][tier];state.owned[slot][tier]=prev+1;save();
-  rollShake=1.3;refresh();openRoll(slot,tier,prev===0);
+  if(rollWait()>0)return;
+  const free=state.tutorial===4;rollCdUntil=performance.now()+ROLL_LOCK*1000;state.rolls++;
+  if(!state.pity4)state.pity4={};SLOTS.forEach(sl=>{if(state.pity4[sl]==null)state.pity4[sl]=0;});
+  const res={},pity={};SLOTS.forEach(sl=>{state.pity4[sl]++;res[sl]=rollTier();});
+  if(free)res.tank=1; // first roll after the maiden flight: the tank pad always shows the Large Tank, and it is a free gift
+  // pity: each pad counts on its own; pads that went PITY_MAX rolls without an Elite are "due",
+  // and a random 1-2 of the due pads are guaranteed an Elite this roll (the rest stay due)
+  const due=SLOTS.filter(sl=>res[sl]!==2&&state.pity4[sl]>=PITY_MAX);
+  if(due.length){const n=Math.min(due.length,1+Math.floor(Math.random()*2));due.sort(()=>Math.random()-0.5).slice(0,n).forEach(sl=>{res[sl]=2;pity[sl]=true;});}
+  const out=SLOTS.map(sl=>{const tier=res[sl];if(tier===2)state.pity4[sl]=0;offers[sl]={tier,sold:false,pity:!!pity[sl]};return{sl,tier,pity:!!pity[sl]};});
+  if(free){offers.tank.sold=true;offers.tank.gift=true;state.inv.tank[1]++;state.owned.tank[1]++;}
+  lastOut=out;save();rollShake=1.3;sfx.click();refresh();openRoll(out,free);
 }
-function openRoll(slot,tier,isNew){
-  $('#rollModal').hidden=false;const c=$('#rollCardM');
-  c.innerHTML=`<h3 class="ol">Rolling…</h3><div class="capsule shake"></div><p class="note">Basic ${ODDS[0]}% · Advanced ${ODDS[1]}% · Elite ${ODDS[2]}% · Elite guaranteed within ${PITY_MAX} rolls</p>`;
+function openRoll(out,free){
+  $('#rollModal').hidden=false;const c=$('#rollCardM');c.classList.add('wide');
+  c.innerHTML=`<h3 class="ol">Rolling ${SLOTS.length} pads…</h3><div class="capsules">${SLOTS.map(()=>'<div class="capsule shake"></div>').join('')}</div><p class="note">Free roll · every pad shows one part for sale · Basic ${ODDS[0]}% · Advanced ${ODDS[1]}% · Elite ${ODDS[2]}%</p>`;
   let n=0;const iv=setInterval(()=>{sfx.tick();if(++n>9)clearInterval(iv);},110);
-  setTimeout(()=>{clearInterval(iv);showReveal(slot,tier,isNew);},1150);
+  setTimeout(()=>{clearInterval(iv);showReveal(out,free);},1150);
 }
-function showReveal(slot,tier,isNew){
-  const c=$('#rollCardM'),it=PARTS[slot].items[tier],col=TIER_COL[tier].f,stars=state.owned[slot][tier];
-  sfx.reveal(tier);lightPillar(ROLLER,col);burst(ROLLER.clone().add(V(0,7,0)),tier===2?120:50,col,tier===2?30:18,1.1);
-  const cur={...state.equip},cand={...state.equip,[slot]:tier},equipped=state.equip[slot]===tier;let cmp='',btns='';
-  if(equipped){cmp=`<p class="note">Your equipped ${it.name} got stronger: <b>★${stars}</b>, +5% coins on every orbit.</p>`;btns=`<button class="btn green" data-r="ok">AWESOME!</button>`;}
-  else{const a=estimate(cur),b=estimate(cand),d=b.orbit-a.orbit,better=d>0||b.orbits>a.orbits;
-    cmp=`<div class="cmp"><div class="col"><span class="h">Current</span><span class="r">${routeText(a.plan)}</span><span class="c">≈ ${fmt(a.orbit)} orbit coins</span></div><span class="ar">→</span><div class="col new"><span class="h">With this part</span><span class="r">${routeText(b.plan)}</span><span class="c">≈ ${fmt(b.orbit)} orbit coins</span></div></div>
-      <div class="delta ol-s${d<0?' neg':''}">${d>0?'+':''}${fmt(d)} coins per flight${b.orbits!==a.orbits?` · ${b.orbits>a.orbits?'+':''}${b.orbits-a.orbits} orbit${Math.abs(b.orbits-a.orbits)>1?'s':''}`:''}</div>`;
-    btns=better?`<button class="btn grey" data-r="keep">KEEP</button><button class="btn green pulse" data-r="equip">EQUIP</button>`:`<button class="btn green" data-r="keep">KEEP CURRENT</button><button class="btn grey" data-r="equip">EQUIP</button>`;}
-  c.innerHTML=`<span class="tierbadge" style="background:${col}">${TIER_NAMES[tier].toUpperCase()}</span>
-    <div class="burst" style="background:radial-gradient(circle,${col}55 0 55%,#11163a 56%)">${partSVG(slot,tier,96)}</div>
-    <div class="pname ol" style="color:${tier===0?'#fff':col}">${it.name}</div><div class="pdesc">${PARTS[slot].label} · ${it.desc}</div>
-    <span class="newtag ol-s${isNew?'':' dup'}">${isNew?'NEW PART!':'DUPLICATE · ★'+stars+' (+5% coins)'}</span>${cmp}
-    ${!equipped?'<p class="note">Equipping changes your loadout. Rebuild in the Assembly Bay to fly it.</p>':''}<div class="mrow">${btns}</div>`;
-  c.querySelectorAll('[data-r]').forEach(b=>b.addEventListener('click',()=>{
-    if(b.dataset.r==='equip'){state.equip[slot]=tier;sfx.build();}else sfx.click();
-    $('#rollModal').hidden=true;if(state.tutorial===4)state.tutorial=ready()?6:5;save();refresh();cv.focus({preventScroll:true});}));
-  const f=c.querySelector('.pulse')||c.querySelector('[data-r]');f&&f.focus({preventScroll:true});
+function buyOffer(sl,fromPanel){const o=offers[sl];if(!o||o.sold||o.tier===0)return false;const price=PRICES[sl][o.tier];
+  if(state.coins<price){sfx.bad();smallHint('Need '+fmt(price-state.coins)+' more coins');return false;}
+  state.coins-=price;state.inv[sl][o.tier]++;state.owned[sl][o.tier]++;o.sold=true;save();
+  const p=PEDS[sl].clone().add(V(0,4,0));burst(p,40,TIER_COL[o.tier].f,12,0.8);burst(player.pos.clone().add(V(0,4,0)),30,TIER_COL[o.tier].f,8,0.7);sfx.coin(4);sfx.build();
+  setPedPart(sl,-2);updatePedLabel(sl);bagBump();
+  const st=fullEq(state.equip)?estimate(state.equip).orbit:null,alt=fullEq(state.equip)?estimate({...state.equip,[sl]:o.tier}):null;
+  if(!fromPanel)callout('IN YOUR BACKPACK','#3bd85c',PARTS[sl].items[o.tier].name+(alt&&!alt.plan.fail&&alt.orbit>st?` · +${fmt(alt.orbit-st)} coins/flight if staged`:''));
+  refresh();return true;}
+function showReveal(out,free){
+  const c=$('#rollCardM'),maxT=Math.max(...out.map(o=>o.tier));
+  sfx.reveal(maxT);
+  out.slice().sort((x,y)=>x.tier-y.tier).forEach((o,i)=>setTimeout(()=>{const col=TIER_COL[o.tier].f;setPedPart(o.sl,offers[o.sl]&&offers[o.sl].sold?-2:o.tier);updatePedLabel(o.sl);lightPillar(PEDS[o.sl],col);
+    burst(PEDS[o.sl].clone().add(V(0,4,0)),o.tier===2?100:30,col,o.tier===2?26:14,1);if(o.tier===2)sparks(PEDS[o.sl].clone().add(V(0,3,0)),30,0.8);},i*160));
+  function render(){
+    const full=fullEq(state.equip),a=full?estimate(state.equip):null;
+    c.innerHTML=`<h3 class="ol">${free?'Free Roll!':'Roll Results'}</h3><div class="r4">${out.map(o=>{const of=offers[o.sl],it=PARTS[o.sl].items[o.tier],col=TIER_COL[o.tier].f,have=invCount(o.sl,o.tier),price=PRICES[o.sl][o.tier];
+      let delta='';if(a&&state.equip[o.sl]!==o.tier){const one=estimate({...state.equip,[o.sl]:o.tier}),sd=one.orbit-a.orbit;delta=one.plan.fail?'Too heavy in your build':(sd>0?'+':'')+fmt(sd)+' coins/flight if staged';}
+      let act;
+      if(of.gift)act='<span class="newtag ol-s">FREE GIFT · IN BACKPACK</span>';
+      else if(o.tier===0)act='<span class="sd" style="color:var(--muted)">Basic · unlimited</span>';
+      else if(of.sold)act='<span class="newtag ol-s">BOUGHT · IN BACKPACK</span>';
+      else act=`<button class="btn ${state.coins>=price?'green':'grey'} sm" data-b="${o.sl}" ${state.coins>=price?'':'aria-disabled="true"'}>BUY · ${fmt(price)}</button>${state.coins<price?`<span class="sd" style="color:var(--muted)">Need ${fmt(price-state.coins)} more</span>`:''}`;
+      return `<div class="r4c${of.sold?' on':''}"><span class="h">${PARTS[o.sl].label}</span><span class="tierbadge" style="background:${col}">${TIER_NAMES[o.tier].toUpperCase()}</span>${partSVG(o.sl,o.tier,56)}<div class="pn ol-s" style="color:${o.tier===0?'#fff':col}">${it.name}</div><span class="sd" style="color:var(--muted)">In backpack: ${have===Infinity?'∞':'×'+have}</span>${o.pity?'<span class="pt">PITY ELITE</span>':''}${delta?`<div class="sd">${delta}</div>`:''}${act}</div>`;}).join('')}</div>
+      <p class="note">Bought parts go to your backpack. Stage them in the Assembly Bay, then press Assemble. Unbought parts stay on the pads until your next roll.</p>
+      <div class="mrow"><button class="btn green pulse" data-r="ok">${free?'GO TO ASSEMBLY BAY':'CLOSE'}</button></div>`;
+    c.querySelectorAll('[data-b]').forEach(bt=>bt.addEventListener('click',()=>{if(buyOffer(bt.dataset.b,true))render();}));
+    c.querySelector('[data-r]').addEventListener('click',()=>{sfx.click();
+      $('#rollModal').hidden=true;if(state.tutorial===4)state.tutorial=5;save();refresh();cv.focus({preventScroll:true});});
+    const f=c.querySelector('.pulse');f&&f.focus({preventScroll:true});
+  }
+  render();
 }
+/* backpack view (HUD) */
+function bagBump(){const b=$('#bagBtn');if(!b)return;b.classList.remove('bump');void b.offsetWidth;b.classList.add('bump');}
+function openBag(){if(mode!=='explore'&&mode!=='assembly')return;const m=$('#bagModal');m.hidden=false;
+  const rows=SLOTS.map(sl=>`<div class="bagrow"><span class="h">${PARTS[sl].label}</span><div class="bagcells">${PARTS[sl].items.map((it,i)=>{const n=invCount(sl,i),staged=state.equip[sl]===i;
+    return `<div class="bagcell${n===0&&!staged?' empty':''}"><span class="tierbadge" style="background:${TIER_COL[i].f}">${TIER_NAMES[i].toUpperCase()}</span>${partSVG(sl,i,40)}<div class="pn">${it.name}</div><b class="qty">${i===0?'∞':'×'+n}</b>${staged?'<span class="sd">Staged in bay</span>':''}${n===0&&i>0&&!staged?'<span class="sd" style="color:var(--muted)">Buy at the part pad</span>':''}</div>`;}).join('')}</div></div>`).join('');
+  $('#bagCard').innerHTML=`<div class="ahead"><h3 class="ol">Backpack</h3><button class="xbtn" id="bagX" aria-label="Close backpack">✕</button></div><p class="note">Same parts stack into one cell; duplicates only add to the count. Stage parts in the Assembly Bay.</p>${rows}`;
+  $('#bagX').onclick=()=>{m.hidden=true;sfx.click();cv.focus({preventScroll:true});};}
+function updatePedLabel(sl){if(!fontsOK)return;const key='price'+sl;if(labels[key])scene.remove(labels[key]);const o=offers[sl];if(!o)return;
+  const it=PARTS[sl].items[o.tier];let t,c,sub;
+  if(o.gift){t=it.name;c='#3bd85c';sub='FREE GIFT · in your backpack';}else if(o.sold){t='SOLD';c='#8d92c8';sub='';}
+  else if(o.tier===0){t=it.name;c='#e5e9f5';sub='BASIC · unlimited · not for sale';}else{t=it.name;c=TIER_COL[o.tier].f;sub=TIER_NAMES[o.tier].toUpperCase()+' · '+fmt(PRICES[sl][o.tier])+' coins';}
+  const s=sub?textSprite(t,c,1.0,sub):textSprite(t,c,1.0);s.position.set(PEDS[sl].x,7.6,PEDS[sl].z);scene.add(s);labels[key]=s;}
 
 /* ================= tally ================= */
 function openTally(){
@@ -1601,7 +1709,9 @@ function frame(now){
   if(padClamp>0){padClamp+=dt*2.2;if(padClamp>=1)padClamp=0;}
   flashI=Math.max(0,flashI-dt*14);flash.intensity=flashI;
   // machines
-  dome.rotation.z=rollShake>0?Math.sin(clock*50)*0.12:0;caps.forEach(c=>{c.position.y=6+Math.sin(clock*(rollShake>0?20:2)+c.userData.p)*(rollShake>0?0.8:0.25);});
+  {const sh=rollShake>0;rollKnob.position.y=sh&&rollShake>1.05?1.95:2.2;rollKnob.material.emissiveIntensity=state.tutorial===4?0.45+Math.sin(clock*6)*0.4:(state.tutorial>=4&&rollWait()===0?0.55+Math.sin(clock*3)*0.2:0.08);
+   SLOTS.forEach(sl=>{const P_=peds[sl];P_.disp.rotation.y+=dt*0.9;P_.disp.position.y=3.3+Math.sin(clock*2+P_.i)*0.18;P_.disp.visible=!sh&&P_.tier>=0;
+     P_.cap.visible=sh||P_.tier===-1;P_.cap.rotation.z=sh?Math.sin(clock*45+P_.i)*0.45:0;P_.cap.position.y=3.6+(sh?Math.abs(Math.sin(clock*22+P_.i))*0.6:Math.sin(clock*2+P_.i)*0.15);});}
   towerLight.material.emissiveIntensity=Math.sin(clock*4)>0?1.2:0.15;
   armsGroup.children.forEach(a=>{const sd=a.userData.sd;a.position.x=sd*(5.4+armOpen*1.9-(padClamp>0?Math.sin(padClamp*Math.PI)*0.9:0));a.rotation.z=-sd*armOpen*0.5;});
   padRing.material.emissiveIntensity=ready()?0.6+Math.sin(clock*5)*0.4:0.3;
