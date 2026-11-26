@@ -260,7 +260,7 @@ function FS.prepare(rocket, padCF, legs, opts)
 	-- 从台面起飞时支架还在原来的夹紧姿态，直接读它
 	S.catchClosed = opts.catchClosed or (opts.fromPad and S.catch and S.catch:GetAttribute("Pose")) or 0
 	if opts.landing and area then
-		S.catchShow = CatchShow.prepare(area, rocket, opts.landing, opts.streak)
+		S.catchShow = CatchShow.prepare(area, rocket, opts.landing, opts.streak, S.scale0) -- 落地后的比例：合拢角按它量
 		local land = S.segs[#S.segs]
 		table.insert(S.events, { land.t0 + land.dur, function() S.catchShow:touchdown() end })
 		table.sort(S.events, function(a, b) return a[1] < b[1] end)

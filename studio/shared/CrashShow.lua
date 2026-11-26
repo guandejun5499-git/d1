@@ -11,7 +11,7 @@
 	维修无人机（原画 E1 还没画，按组装舱龙门吊的造型语言设计）：深蓝机身 + 白色顶壳 + 橙色饰条，
 	  四个机臂 + 半透明旋翼盘，机腹青色「眼睛」+ 点光源，机腹一支小焊接臂；约 6 × 1.6 × 6
 	X.buildDrone(cf, parent) → 无人机 Model；X.play(launchArea, rocket, opts)：跑完整段（阻塞约 5.3 s）
-	opts.dronFrom：无人机出发点（默认组装舱上空）
+	opts.droneFrom：无人机出发点（默认组装舱上空）
 ]]
 
 local B = require(script.Parent.BuildLib)

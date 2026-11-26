@@ -96,7 +96,12 @@ function VS.knock(from, power, radius)
 		local d = V(r.pos.X - from.X, 0, r.pos.Z - from.Z)
 		local dist = math.max(1, d.Magnitude)
 		if dist < radius then
-			d = d.Unit
+			if d.Magnitude < 1e-3 then -- 正好在冲击点上：随便挑一个水平方向（零向量取 Unit 会得到 NaN）
+				local a = math.random() * math.pi * 2
+				d = V(math.cos(a), 0, math.sin(a))
+			else
+				d = d.Unit
+			end
 			local f = power * S * (0.45 + 0.55 * clamp01(1 - dist / radius))
 			r.rd = {
 				phase = "fly", t = 0,

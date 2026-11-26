@@ -88,8 +88,9 @@ local function clawPoints(arms, deck)
 end
 
 ------------------------------------------------------------------ 准备
-function C.prepare(area, rocket, result, streak)
-	local S = { area = area, rocket = rocket, result = result or "perfect", streak = streak or 1 }
+-- scale0：火箭落地后的比例（可选）。「接早了」时火箭还没缩回原尺寸，合拢角要按落地后的比例量
+function C.prepare(area, rocket, result, streak, scale0)
+	local S = { area = area, rocket = rocket, result = result or "perfect", streak = streak or 1, scale0 = scale0 }
 	S.arms = area:FindFirstChild("CatchArms")
 	S.zone = area:FindFirstChild("CatchZone")
 	local hole = area:FindFirstChild("LaunchPad") and area.LaunchPad:FindFirstChild("FlameHole")
@@ -125,10 +126,14 @@ function C.land(S, u, dur)
 		if lead then
 			local uc = 1 - lead / dur
 			if u >= uc and not S.closeTo then
-				-- 合拢角：按火箭落在台上的姿态算（临时把火箭放到落位再算）
+				-- 合拢角：按火箭落在台上的姿态和落地后的比例算（临时把火箭缩回原尺寸、放到落位再算，算完复原）
 				local cf = S.rocket:GetPivot()
-				S.rocket:PivotTo(CFrame.new(S.deck + V(0, S.rocket:GetPivot().Y - S.deck.Y - base, 0)) * (cf - cf.Position))
+				local s = S.rocket:GetScale()
+				local resize = S.scale0 and math.abs(s - S.scale0) > 1e-3
+				if resize then S.rocket:ScaleTo(S.scale0) end
+				S.rocket:PivotTo(CFrame.new(S.deck) * (cf - cf.Position))
 				S.closeTo = C.fitClose(S.arms, S.rocket)
+				if resize then S.rocket:ScaleTo(s) end
 				S.rocket:PivotTo(cf)
 				local pts = clawPoints(S.arms, S.deck)
 				for _, p in ipairs(pts) do FX.sparks(p, 10, 0.5) end

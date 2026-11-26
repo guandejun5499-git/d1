@@ -225,12 +225,16 @@ local function ensureBound()
 		t += dt
 		local cam = workspace.CurrentCamera
 		if not cam then return end
-		-- Scriptable 镜头不会每帧被镜头脚本重写：先撤掉上一帧加的偏移，避免越震越偏
-		-- （默认镜头每帧都会重算 CFrame，上一帧的偏移已经不在了，不用撤）
-		if shake.applied and cam.CameraType == Enum.CameraType.Scriptable then
+		-- Scriptable 镜头不会每帧被镜头脚本重写：先撤掉上一帧加的偏移，避免越震越偏。
+		-- 只有镜头还停在我们上一帧写下的位置时才撤；如果别的脚本（例如 JupiterReveal 运镜）这一帧已经重写过，
+		-- 上一帧的偏移已经不在了，再撤会把这次的震动抵消掉（默认镜头每帧都会重算，同理不用撤）
+		if shake.applied and shake.wrote and cam.CameraType == Enum.CameraType.Scriptable
+			and cam.CFrame.Position:FuzzyEq(shake.wrote.Position, 1e-4)
+			and cam.CFrame.LookVector:FuzzyEq(shake.wrote.LookVector, 1e-5)
+			and cam.CFrame.UpVector:FuzzyEq(shake.wrote.UpVector, 1e-5) then
 			cam.CFrame = cam.CFrame * shake.applied:Inverse()
 		end
-		shake.applied = nil
+		shake.applied, shake.wrote = nil, nil
 		local now = os.clock()
 		shake.trauma = math.max(0, shake.trauma - 1.5 * dt)
 		local lv = shake.trauma
@@ -242,7 +246,7 @@ local function ensureBound()
 		local off = CFrame.new(n(1) * 1.2 * k, n(2) * 1.2 * k, 0)
 			* CFrame.Angles(math.rad(n(3) * 4 * k), math.rad(n(4) * 4 * k), math.rad(n(5) * 2.5 * k))
 		cam.CFrame = cam.CFrame * off
-		shake.applied = off
+		shake.applied, shake.wrote = off, cam.CFrame
 	end)
 	return true
 end

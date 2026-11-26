@@ -69,6 +69,8 @@ local function capture()
 	local m = model()
 	if not m then return nil end
 	if state and state.m == m then return state end
+	-- 换了模型（重建 / 重新流式加载）：旧的本地行星环一起拆掉，避免残留一套
+	if state and state.ringAnchor then state.ringAnchor:Destroy() end
 	state = { m = m, parts = {}, dashes = {} }
 	for _, p in ipairs(m:GetChildren()) do
 		if p:IsA("BasePart") then
