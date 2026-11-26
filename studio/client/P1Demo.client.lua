@@ -2,9 +2,12 @@
 -- Workspace 属性 P1Demo = true 时才跑，在家园 0 轮流播放：
 --   第 13 项 Roll 揭晓（随机结果，概率同正式 55 / 35 / 10）→ 买下最好的一件（光球飞进玩家）
 --   第 12 项 组装演出（四种组合轮流，先把部件放进部件坞）
---   第 14 项 点火与发射（按住点火的蓄力按 Web Demo 的 2.3 s 一圈模拟：完美 / 超级发射 / 超载熄火 轮流），
+--   第 14 项 点火与发射（按住点火的蓄力点火 1.6 s + 超载 0.9 s + 彩虹 0.9 s 模拟：完美 / 超级发射 / 超载熄火 轮流），
 --   第 15 项 飞行表现：升空后接着飞月球两圈（完美 / 超级那一轮第二圈进入轨道狂热）→ 返航降落；
 --          同时邻居家园 1 的火箭也起飞（带狂热），看邻居的彩虹尾迹
+--   第 16 / 17 项 降落：每轮轮流 完美接住（连续第 5 次：夹口大火花 + 电弧）/ 没接住坠毁 + 维修无人机 / 良好接住 / 接早了
+--   第 18 项 每轮开头先播一次木星解锁（镜头移到木星，演完还给玩家；下一轮开头先恢复锁定再播）
+--   第 19 项 围观访客由 Visitors.client.lua 驱动：发射欢呼、超级发射 / 坠毁被掀翻（这里不用管）
 -- 只改本地显示：台上旧火箭会在本地被新火箭替换。
 
 local Players = game:GetService("Players")
@@ -21,6 +24,8 @@ local RR = require(SH:WaitForChild("RollReveal"))
 local LS = require(SH:WaitForChild("LaunchShow"))
 local FX = require(SH:WaitForChild("ShowFX"))
 local FS = require(SH:WaitForChild("FlightShow"))
+local XS = require(SH:WaitForChild("CrashShow"))
+local JR = require(SH:WaitForChild("JupiterReveal"))
 
 local home = workspace:WaitForChild("OrbitWorld"):WaitForChild("Homes"):WaitForChild("Home_0")
 local bay = home:WaitForChild("AssemblyBay")
@@ -67,17 +72,26 @@ local function demoAssemble(eq)
 	AS.play(bay, eq, color)
 end
 
--- 点火蓄力：一圈 2.3 s；完美 = 第一圈 85% 松手，超级 = 第三圈（彩虹区）85% 松手，超载 = 撑满三圈自动熄火
-local CYCLE = 2.3
-local HOLD = { perfect = 0.85 * CYCLE, super = 2.85 * CYCLE, stall = 3 * CYCLE }
+-- 点火蓄力（11-25 用户反馈等太久 → 缩短）：点火段 1.6 s，超载段、彩虹段各 0.9 s；
+-- 完美 = 点火段 85% 松手（1.4 s），超级 = 彩虹段 85% 松手（3.3 s），超载 = 撑满三段自动熄火（3.4 s）
+local STAGE = { 1.6, 0.9, 0.9 }
+local HOLD = { perfect = 0.85 * STAGE[1], super = STAGE[1] + STAGE[2] + 0.85 * STAGE[3], stall = STAGE[1] + STAGE[2] + STAGE[3] }
+local function gauge(t) -- 返回 当前段进度 v、段号 stage
+	local acc = 0
+	for k, d in ipairs(STAGE) do
+		if t < acc + d or k == #STAGE then return math.clamp((t - acc) / d, 0, 1), k - 1 end
+		acc += d
+	end
+end
 local JUDGES = { "perfect", "super", "stall" }
-local function demoLaunch(judge)
+local LANDINGS = { { "perfect", 5 }, { "crash", 0 }, { "great", 0 }, { "early", 0 } }
+local function demoLaunch(judge, landing)
 	launchArea:WaitForChild("PadRocket", 5)
 	local S = LS.prepare(launchArea)
 	local t0 = os.clock()
 	while os.clock() - t0 < HOLD[judge] do
 		local t = os.clock() - t0
-		S:charge((t % CYCLE) / CYCLE, math.min(2, math.floor(t / CYCLE)))
+		S:charge(gauge(t))
 		task.wait()
 	end
 	-- 邻居家园 1 的火箭同时起飞（带狂热），从自家看它的彩虹尾迹
@@ -97,23 +111,29 @@ local function demoLaunch(judge)
 	local rocket = launchArea:FindFirstChild("PadRocket")
 	-- 起飞前的比例和支架夹紧角都由 LaunchShow 记下，交给飞行（宽火箭降落时支架不能合到 0）
 	local F = FS.prepare(rocket, S.home, { { body = "moon", orbits = 2, fever = { [2] = judge ~= "stall" } } },
-		{ launchArea = launchArea, scale0 = S.scale0, catchClosed = S.catchPose0 })
+		{ launchArea = launchArea, scale0 = S.scale0, catchClosed = S.catchPose0, landing = landing[1], streak = landing[2] })
 	F:play()
-	FX.puff(S.base + Vector3.new(0, 1.5, 0), 16, Color3.fromRGB(214, 217, 234), 8, 3, { life = 1.4, influence = 1 })
+	if landing[1] == "crash" then
+		XS.play(launchArea, rocket) -- 第 17 项：坠毁 + 维修无人机
+	end
+	task.wait(1)
 	F:cleanup()
 end
 
 task.wait(3)
 local i = 0
 while true do
-	local ok, err = pcall(demoRoll)
+	local ok, err = pcall(JR.play, { camera = true })
+	if not ok then warn("[P1Demo] JupiterReveal", err) end
+	task.wait(1)
+	ok, err = pcall(demoRoll)
 	if not ok then warn("[P1Demo] RollReveal", err) end
 	task.wait(2)
 	i = i % #EQS + 1
 	ok, err = pcall(demoAssemble, EQS[i])
 	if not ok then warn("[P1Demo] AssemblyShow", err) end
 	task.wait(1.5)
-	ok, err = pcall(demoLaunch, JUDGES[(i - 1) % #JUDGES + 1])
+	ok, err = pcall(demoLaunch, JUDGES[(i - 1) % #JUDGES + 1], LANDINGS[(i - 1) % #LANDINGS + 1])
 	if not ok then warn("[P1Demo] LaunchShow", err) end
 	task.wait(3)
 end

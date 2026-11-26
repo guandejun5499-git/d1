@@ -21,6 +21,7 @@ local B = require(script.Parent.BuildLib)
 local RK = require(script.Parent.RocketKit)
 local CA = require(script.Parent.CatchArms)
 local FX = require(script.Parent.ShowFX)
+local VS = require(script.Parent.VisitorShow)
 
 local V = Vector3.new
 local NSK = NumberSequenceKeypoint.new
@@ -161,7 +162,7 @@ function LS.startLaunch(S, judge)
 	S.events, S.ei, S.t = {}, 1, -1
 	local function ev(t, fn) table.insert(S.events, { t, fn }) end
 	local base = S.base
-	S.lift0 = (judge == "stall") and 0.7 or 0 -- 熄火要先抖 0.7 s 再起飞
+	S.lift0 = (judge == "stall") and 0.5 or 0 -- 熄火要先抖 0.5 s 再起飞（11-25 缩短）
 	S.rocket:PivotTo(S.home)
 
 	if judge == "stall" then
@@ -171,13 +172,13 @@ function LS.startLaunch(S, judge)
 			FX.puff(base + V(0, 1.5, 0), 14, B.hex("22222A"), 6, 4, { life = 1.8, influence = 1, t0 = 0.15 })
 			FX.shake(base, 0.5, 0.6)
 		end)
-		for k = 0, 5 do
-			ev(0.05 + k * 0.1, function()
+		for k = 0, 3 do
+			ev(0.04 + k * 0.08, function()
 				setFlame(S, (k % 2 == 0) and 0.35 or 0.05, false, "launch")
 				FX.puff(base + V(0, 1.2, 0), 3, B.hex("1C1C22"), 4, 3, { life = 1.4, influence = 1, t0 = 0.2 })
 			end)
 		end
-		ev(0.58, function() setFlame(S, 0, false, "flight") end) -- 熄火
+		ev(0.38, function() setFlame(S, 0, false, "flight") end) -- 熄火
 		ev(S.lift0, function() -- 重新点着
 			FX.puff(base + V(0, 1, 0), 10, B.hex("4A4A55"), 8, 3, { life = 1.2, influence = 1 })
 			FX.flash(base + V(0, 2, 0), WARM, 24, 4, 0.4)
@@ -205,14 +206,18 @@ function LS.startLaunch(S, judge)
 			end
 			FX.chunks(base + V(0, 1, 0), 14, 1.5)
 			FX.shake(base, 1.4, 0.9)
+			VS.knock(base, 48) -- 冲击波掀翻附近的访客
+			VS.cheer(base, 3)
 		elseif not weak then
 			FX.ring(CFrame.new(base + V(0, 0.08, 0)), 2.5, 16, B.hex("FFD27A"), 0.8, { width = 0.8 })
 			FX.ring(CFrame.new(base + V(0, 0.12, 0)), 1.5, 11, Color3.new(1, 1, 1), 1.1, { width = 0.5 })
 			FX.sparks(base + V(0, 1, 0), 50, 1.5)
 			FX.shake(base, 0.8, 0.6)
+			VS.cheer(base, (judge == "perfect") and 2 or 1.5)
 		else
 			FX.ring(CFrame.new(base + V(0, 0.08, 0)), 2, 9, B.hex("C8CDE6"), 0.7, { width = 0.4 })
 			FX.shake(base, 0.4, 0.4)
+			VS.cheer(base, 1)
 		end
 	end)
 	S.duration = l0 + LS.ASCENT
