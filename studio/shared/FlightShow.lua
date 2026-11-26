@@ -13,6 +13,8 @@
 	  padCF = 台上火箭的落位（PadRocket 原来的 pivot）；legs = { { body = "moon", orbits = 2, fever = { [2] = true } } }
 	  opts.speed（默认 1.2）；opts.fromPad = true 时从台面起飞（邻居 / 单独演示），否则从火箭当前位置接着爬升；
 	  opts.worldFever = false：狂热时不改轨道线和门（邻居的火箭用）
+	  opts.landing = "perfect" | "great" | "early" | "crash"、opts.streak：降落和落地交给 CatchShow（第 16 项）；
+	  "crash" 落地后再调 CrashShow.play（第 17 项）
 	show:runTo(t) 逐帧 / show:play() 跑完；show.duration 总时长；FS.cleanup(show) 拆掉拖尾和光球、恢复轨道线和门
 ]]
 
@@ -22,6 +24,7 @@ local O = require(script.Parent.Orbits)
 local G = require(script.Parent.OrbitGate)
 local FX = require(script.Parent.ShowFX)
 local CA = require(script.Parent.CatchArms)
+local CatchShow = require(script.Parent.CatchShow)
 local CS = game:GetService("CollectionService")
 
 local V = Vector3.new
@@ -256,6 +259,12 @@ function FS.prepare(rocket, padCF, legs, opts)
 	-- 落地后的合拢角：调用方传入（宽火箭不能合到 0，见 AssemblyShow.closeAlpha）；
 	-- 从台面起飞时支架还在原来的夹紧姿态，直接读它
 	S.catchClosed = opts.catchClosed or (opts.fromPad and S.catch and S.catch:GetAttribute("Pose")) or 0
+	if opts.landing and area then
+		S.catchShow = CatchShow.prepare(area, rocket, opts.landing, opts.streak)
+		local land = S.segs[#S.segs]
+		table.insert(S.events, { land.t0 + land.dur, function() S.catchShow:touchdown() end })
+		table.sort(S.events, function(a, b) return a[1] < b[1] end)
+	end
 	S.fever = false
 	S.lastQ = rocket:GetPivot() - rocket:GetPivot().Position
 	return setmetatable(S, { __index = FS })
@@ -346,7 +355,9 @@ function FS.at(S, t)
 		if S.flameState then S:flame(table.unpack(S.flameState)) end
 	end
 	S.rocket:PivotTo(q + p)
-	if S.catch then
+	if S.catchShow and sg.type == "land" then
+		S.catchShow:land(u, sg.dur)
+	elseif S.catch and not S.catchShow then
 		local pose
 		if sg.type == "ascent" and S.opts.fromPad then pose = smooth(u / 0.06) end
 		if sg.type == "land" then pose = 1 - smooth((u - 0.86) / 0.14) * (1 - S.catchClosed) end

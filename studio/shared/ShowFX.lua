@@ -8,6 +8,7 @@
 	FX.puff(pos, n, color, speed, size, opts?) 烟 / 尘一团
 	FX.shake(pos, power, dur)                镜头震动：一次冲击（累加「震感」后慢慢衰减），dur 内保持一定强度
 	FX.rumble(pos, level)                    持续轻震：每帧调用（点火蓄力、火箭抖动时用）
+	FX.confetti(pos, n, power, colors?)      彩色纸屑：向上炸开后翻转飘落、淡出（锚定小薄片，客户端逐帧移动，约 2.6 s）
 	  11-25 用户要求火箭震动时镜头也要有反馈 → 改成统一的震感控制器：每帧在相机更新之后叠加平滑噪声的
 	  位移（±0.6）+ 转角（±2°），强度 = 震感²（小震轻、大震重），离镜头 / 角色 90 格外不震
 ]]
@@ -266,6 +267,53 @@ function FX.rumble(pos, level)
 	-- 直接覆盖：强度跟着本帧的 level 走，可以渐弱（升空余震）；一次性冲击的保底在 hold 里，互不影响
 	shake.rumble = (level or 0) * falloff(pos)
 	shake.rumbleUntil = os.clock() + 0.1
+end
+
+-- 彩色纸屑：锚定薄片逐帧模拟（重力小 + 空气阻力 + 翻转），不进物理
+FX.CONFETTI = { Color3.fromRGB(255, 204, 51), Color3.fromRGB(62, 160, 255), Color3.fromRGB(255, 94, 122), Color3.fromRGB(59, 216, 92), Color3.fromRGB(255, 255, 255), Color3.fromRGB(164, 107, 255) }
+function FX.confetti(pos, n, power, colors)
+	power = power or 1
+	colors = colors or FX.CONFETTI
+	local f = folder()
+	local bits = {}
+	for i = 1, n do
+		local p = Instance.new("Part")
+		p.Name = "Confetti"
+		p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+		p.Material = Enum.Material.SmoothPlastic
+		p.Color = colors[(i - 1) % #colors + 1]
+		p.Size = V(0.42, 0.05, 0.26)
+		local a = math.random() * math.pi * 2
+		local out = (4 + math.random() * 9) * power
+		table.insert(bits, {
+			p = p, pos = pos + V(math.cos(a), 0, math.sin(a)) * math.random() * 1.2,
+			v = V(math.cos(a) * out, (14 + math.random() * 14) * power, math.sin(a) * out),
+			rot = CFrame.Angles(math.random() * 6, math.random() * 6, math.random() * 6),
+			spin = V(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) * 14,
+			sway = math.random() * 6,
+		})
+		p.CFrame = CFrame.new(pos)
+		p.Parent = f
+	end
+	local life = 2.6
+	task.spawn(function()
+		local t0, last = os.clock(), os.clock()
+		while true do
+			local now = os.clock()
+			local dt, t = math.min(0.05, now - last), now - t0
+			last = now
+			if t >= life then break end
+			for _, b in ipairs(bits) do
+				b.v = b.v * (1 - math.min(1, 2.4 * dt)) + V(0, -16 * dt, 0) -- 阻力大、下落慢，像纸片
+				b.pos += (b.v + V(math.sin(t * 5 + b.sway) * 1.5, 0, math.cos(t * 4 + b.sway) * 1.5)) * dt
+				b.rot = b.rot * CFrame.Angles(b.spin.X * dt, b.spin.Y * dt, b.spin.Z * dt)
+				b.p.CFrame = CFrame.new(b.pos) * b.rot
+				b.p.Transparency = math.clamp((t - (life - 0.6)) / 0.6, 0, 1)
+			end
+			task.wait()
+		end
+		for _, b in ipairs(bits) do b.p:Destroy() end
+	end)
 end
 
 return FX
