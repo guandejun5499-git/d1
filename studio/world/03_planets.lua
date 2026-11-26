@@ -96,6 +96,7 @@ do
 	local m = Instance.new("Model")
 	m.Name = "Jupiter"
 	m:SetAttribute("Locked", true)
+	m.ModelStreamingMode = Enum.ModelStreamingMode.Persistent -- 天上的地标，到处都看得见；解锁演出在客户端改护盾 / 轨道门，整颗常驻
 	local C = Vector3.new(170, 400, -220)
 	local R = 72
 	local tilt = CFrame.new(C) * CFrame.Angles(0, 0, 0.12)
