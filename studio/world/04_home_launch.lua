@@ -47,7 +47,7 @@ local function build(K, LITE)
 	local pad = B.model("LaunchPad", m)
 	B.cylAt(17, 0, 1.0, P, { Name = "Base", Color = C.graphite }, pad)
 	B.cylAt(16, 1.0, 0.5, P, { Name = "Deck", Color = C.graphite2 }, pad)
-	B.segRing(P * CFrame.new(0, 0.5, 0), 8.52, 36, 0.7, 0.06, 0.6, { Name = "Hazard", Color = C.yellow }, pad)
+	-- 11-25 用户要求：台座侧面的黄色警示块去掉（台面上的橙色虚线保留，表示可互动）
 	B.segRing(P * CFrame.new(0, 1.53, 0), 6.4, 24, 1.0, 0.5, 0.06, { Name = "Dash", Color = C.orange }, pad) -- 橙色虚线 = 可互动
 	B.cylAt(7, 1.5, 0.08, P, { Name = "LaunchPlate", Color = B.hex("5A6178") }, pad)
 	B.cylAt(3.4, 1.5, 0.12, P, { Name = "FlameHole", Color = C.graphite3 }, pad)
