@@ -193,7 +193,7 @@ local function armL4(H, yt, col, m)
 	-- 顶部光球 + 小全息环 + 星光
 	local orb = B.fx.orb(at(0, yt + 0.6, 0), 0.8, GOLD_GLOW, m)
 	B.fx.sparkles(orb, Color3.new(1, 1, 1), 4, 0.3)
-	B.fx.haloRing(at(0, yt + 0.6, 0) * CFrame.Angles(math.rad(25), 0, 0), 0.85, 10, Color3.new(1, 1, 1), 2.2, m)
+	B.fx.haloRing(at(0, yt + 0.6, 0) * CFrame.Angles(math.rad(25), 0, 0), 0.85, 10, Color3.new(1, 1, 1), 2.2, m):SetAttribute("SpinFollowParent", true)
 end
 
 local ARM = { armL1, armL2, armL3, armL4 }
