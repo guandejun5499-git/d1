@@ -51,7 +51,7 @@ print(require(s)); s:Destroy()
 |---|---|---|
 | `01_atmosphere.lua` | 天空盒、光照、Bloom、ColorCorrection | ClockTime 14.5；Ambient #4A4472、OutdoorAmbient #8E88B4、ColorShift_Top #E4DCFF、Brightness 1.6；Bloom 0.7 / 28 / 1.6；饱和 +0.12、对比 +0.08；无 Atmosphere |
 | `02_islands.lua` | 广场、6 家地台、连桥、岩体、光柱、信标、漂浮光点、出生点 | PLAZA_R 60、HOME_R 55、HOME_D 122、BRIDGE_W 26（11-25 放大，原 46 / 42 / 94 / 22）；装饰尺度 S = 1.3（岩体深度、碎石、晶体）；中央圆台 Ø24；家园地面 #DEDBF0、广场 #C9C5E6；凸点贴图 `rbxassetid://123208729655253`，透明 0.72；广场光柱高 65；家园光柱高 156，在本地 (23.4, apo − 6) |
-| `03_planets.lua` | 月球、锁定木星；11-24 起含正式轨道门（月球 normal、木星 locked）、木星轨道虚线、月球 → 木星转场航线 | 月球 (−50, 190, −60) r 28；木星 (170, 400, −220) r 72，ForceField 紫色护盾，锁定标签在星球下方 |
+| `03_planets.lua` | 月球、锁定木星（11-26 起模型 Persistent 常驻）；11-24 起含正式轨道门（月球 normal、木星 locked）、木星轨道虚线、月球 → 木星转场航线 | 月球 (−50, 190, −60) r 28；木星 (170, 400, −220) r 72，ForceField 紫色护盾，锁定标签在星球下方 |
 | `studio/shared/BuildLib.lua`（原 `world/lib/`） | 建造工具 + 火箭部件 v2 + 特效工具 | 见第 4 节；`B.rocket` 的 WorldPivot = 发动机底面中心 |
 | `04_home_launch.lua` | 发射台、L1 支架、塔架、升级牌、台上火箭 | 发射台 Ø17 × 1.5 在 (0, −26)；L1 支架高 6.5，x = ±6.2；塔架高 25 在 (−9, −35)；升级牌 (−9.5, −22.5) |
 | `05_home_bay.lua` | 组装舱 + 运输带 | 中心 (33.8, −6.5)；底座 18 × 18 × 1.2，立柱 18.8；−X（门）、−Z、+Z 三面玻璃，+X 机械墙；门楣信息屏朝 −X；运输带 (26.2, −6.5) → (6.58, −21.1) |
@@ -59,6 +59,10 @@ print(require(s)); s:Destroy()
 | `07_home_misc.lua` | 出生点标记 (0, −6.5)、3 个店位 (−31.2, −15.6 / 0 / 15.6) 朝 +X | 「即将开放」 |
 | `08_parts_review.lua` | 临时部件验收台（可行走） | 见第 6 节 |
 | `09_p0_review.lua` | 临时 P0 验收台（可行走，接在部件验收台右侧） | 见第 14 节 |
+| `11_drone_review.lua` | 临时维修无人机验收台 `_DroneReview` | 见第 16 节第 17 项 |
+| `12_plaza.lua` | 广场内容 `PlazaContent`：火箭雕塑 + 公共商店位 ×3 | 见第 16 节第 20 项 |
+| `13_visitors.lua` | 各家 3 名围观访客 `Home_K.Visitors` | 见第 16 节第 19 项 |
+| `studio/client/Meteors.client.lua` / `Visitors.client.lua` | 客户端流星；访客动作驱动 | 见第 16 节第 19 / 21 项 |
 | `studio/client/RocketFX.client.lua` | 客户端动画 | 标签 SpinFX（绕 WorldPivot Y 轴转，属性 SpinSpeed）、PulseFX（透明度呼吸 / 闪烁，属性 PulseBase / PulseAmp / PulseSpeed）、RainbowFX（零件或 HandleAdornment 色相循环，属性 RainbowOffset）、BreatheFX（模型缩放呼吸，属性 BreatheAmp）；600 studs 外跳过 |
 
 **家园坐标**：家园 k 的框架为
@@ -328,3 +332,52 @@ CFrame.new(Vector3.new(math.sin(a), 0, math.cos(a)) * 122) * CFrame.Angles(0, a,
 - P1Demo 每轮发射后接着飞月球两圈（完美 / 超级那轮第二圈进狂热），同时邻居家园 1 的火箭带狂热起飞。
 - 检查：编辑模式截图（狂热圈火箭沿切线飞、彩虹尾焰）；Play 模式完整一轮：自己的火箭第二圈门切 fever、轨道线彩虹（5 s），出轨道恢复；邻居火箭同时飞、带拖尾；控制台无报错。
 - 待办：三档巨型燃料舱落地时支架合拢角还是 0（会夹进侧挂舱），第 16 项接住时一起处理。
+- **11-25 点火等待太长（用户反馈）**：原因是演示按 Web Demo 一圈 2.3 s 模拟蓄力，超级发射要撑两圈多（6.6 s）、超载熄火三圈（6.9 s + 抖 0.7 s），与火箭档次无关。改成：点火段 1.6 s、超载段 0.9 s、彩虹段 0.9 s → 完美 1.4 s、超级 3.3 s、超载 3.4 s + 抖 0.5 s 起飞（熄火断续缩到 0.38 s）。Play 实测完美一轮点火到离台 1.5 s。
+  **建议同步到设计方案和 Web Demo**：正式玩法里蓄力表也用 1.6 / 0.9 / 0.9 三段（原 2.3 × 3），否则玩家冲超级发射要按住 6 秒多。待用户确认后再改设计方案和 Web Demo。
+
+**第 16 项 完美接住 / 连续接住（✅ 11-25 做完，待验收）** `OrbitShared.CatchShow`（本地 `studio/shared/CatchShow.lua`）
+- 由 FlightShow 降落段驱动：`FS.prepare(..., { landing = "perfect" | "great" | "early" | "crash", streak = n })`。
+- 降落中：接住区光柱（CatchZone，绿区高度随支架等级）显示，火箭底环随区段 白 → 黄 → 绿；离台面 14 格以内扬起尘土，越低越密。
+- 「接住」时刻（演示按结果模拟：完美落地前 0.22 s、良好 0.55 s、太早 1.35 s）：支架 0.12 s 合拢 + 夹口小火花；合拢角 `CatchShow.fitClose` 按火箭实际宽度找（巨型燃料舱侧挂舱 → 0.2，不再夹进去）。
+- 落地：完美 = 火箭放大 6% 回弹（定格感）+ 两个夹口大火花 + 弹跳火星 + 金 / 白双层冲击波 + 70 片彩色纸屑（`ShowFX.confetti`）+ 金光 + 震动；连续第 3 次起夹口火花加倍；第 5 次起两只支架之间 1.6 s 青白电弧（折线 Neon 段每 0.05 s 抖动 + 点光源 + 电火花）。良好 = 蓝色冲击波 + 少量火花。太早 = 支架空合一下弹回半开，火箭落台弹一下再夹紧 + 扬尘。没接住 = 支架保持张开，交给第 17 项。
+
+**第 17 项 华丽坠毁 + 维修无人机（✅ 11-25 做完，待验收）** `OrbitShared.CrashShow`（本地 `studio/shared/CrashShow.lua`）
+- 0–0.6 s 火箭绕底面边缘倾倒 → 卡通爆炸：橙色火球膨胀淡出、白热闪光、火花、弹跳火星、黑烟 + 橙烟、橙色冲击环、强震；火箭拆成发动机 / 燃料舱 / 鼻锥 / 四片尾翼，各自带速度和自转飞出，在台面 / 地面弹跳冒烟（手动积分，不进物理）。
+- 2.2 s 维修无人机从组装舱上空飞来悬停；2.9–4.5 s 青色修复光锥（ConeHandleAdornment）照住发射台，无人机焊接臂迸焊花，部件间隔 0.12 s 沿弧线飞回原位、卡上冒火花；全部归位青色爆闪；4.6–5.2 s 无人机升空飞走；最后支架合拢（按火箭宽度）。
+- **维修无人机造型**（原画 E1 未画，按组装舱龙门吊的造型语言设计）：深蓝机身 + 白色顶壳 + 橙色饰条 + 绿色状态灯，四个机臂 + 电机 + 半透明旋翼盘（客户端 SpinFX 转），机腹青色「眼睛」+ 点光源，机腹一支白色焊接臂 + 青白焊枪尖；约 6 × 1.6 × 6。`CrashShow.buildDrone(cf, parent)`。**原画 E1 待补。**
+- 拆组前记下所有嵌套模型轴心并暂停全息环自转，修好后放回，不会再出现全息环乱转。
+- P1Demo 每轮降落轮流：完美（连续第 5 次，带电弧）→ 坠毁 + 维修无人机 → 良好 → 太早。
+- 检查：编辑模式截图（爆炸后部件四散、修好后火箭直立支架合拢、无人机造型）；Play 模式完美一轮（光柱黄 → 绿、落地前合拢、70 片纸屑、电弧 10 段）、坠毁一轮（火球、燃料舱飞出 30 格、无人机 + 光锥、部件飞回、支架合拢、火箭回原位），控制台无报错。
+- **11-25 维修无人机验收台（用户要求）**：`world/11_drone_review.lua`（Studio `ServerStorage.WorldBuild.B11_drone_review`）建 `OrbitWorld._DroneReview`，在付费支架验收台南边（甲板 x 194–234，z 236–254，步道接付费支架验收台），109 件。左（+X）：放大 2.5 倍悬在基座上方、Play 时缓慢自转（旋翼也转）；右：原尺寸悬停在一档火箭上方，打开青色修复光锥，看比例。验收后整块删除。
+
+**第 18 项 木星解锁演出（✅ 11-26 做完，待验收）** `OrbitShared.JupiterReveal`（本地 `studio/shared/JupiterReveal.lua`）
+- 客户端本地（解锁是每个玩家自己的进度）。`J.play({ camera = true })` 跑完整段约 4.6 s（阻塞）；`J.setUnlocked(0 | 1)` 读档时直接设状态；`J.reset()` 恢复锁定（演示用）。
+- 时间轴（Web Demo startReveal / updateReveal）：0–1.8 护盾外发光呼吸闪烁越来越快 → 1.8 护盾发白、朝镜头一侧的球面爬出一圈白色 Neon 裂纹（9 条折线 × 5 段）、淡紫闪屏、轻震 → 1.8–2.35 护盾 ±2% 抖动 → 2.35 碎裂：护盾和外发光消失，球面 4 色（淡紫 / 金 / 白 / 橙）共 300 颗光点向外喷，金 / 紫两层冲击环朝镜头展开，暖白闪屏 + 震动，锁定牌隐藏，轨道门 locked → normal → 2.35–3.8 木星从暗色恢复全彩（饱和 × 1.35、亮度 × 1.4，大红斑饱和 × 1.6），三层行星环（内侧在轨道内，倾斜，色 E8C79A / C98D5B / F3E2C6）从 0.5 倍展开到原大并淡入，轨道虚线变成和月球一样的白色。
+- `camera = true` 时镜头 1.2 s 平滑移到能看全木星和行星环的位置，结束前 0.6 s 平滑还给玩家。
+- 锁定原色第一次读到时存进各零件属性 `LockedColor` / `LockedT` / `LockedSize`（编辑模式里已存好），之后都从属性取：反复测试 / 重复 require 不会把解锁色当原色（第一次 Edit 测试就因此把木星颜色弄亮了，已按 03 的原色还原）。
+- **StreamingEnabled 注意**：第一次 Play 测试轨道门还没流到客户端，`OrbitGate.setState` 报错中断演出。木星模型改为 `ModelStreamingMode = Persistent`（天上的地标，到处都看得见；03 已加这一行），演出里改门状态也先 WaitForChild 再 pcall。
+- P1Demo 每轮开头先播一次（下一轮开头恢复锁定再播）。
+- 检查：Edit 截图解锁态（全彩 + 三层环 + 白色虚线 + 门 normal）；Play 实测时序：0.4 s 起闪烁、1.4 s 出 45 段裂纹、1.8 s 碎裂（护盾隐藏、光点、门 normal）、1.8–3.2 s 颜色和行星环展开（环半径 58 → 117）、4.0 s 镜头还原，锁定牌隐藏，控制台无报错。
+
+**第 19 项 围观访客 ×3（✅ 11-26 做完，待验收）** `world/13_visitors.lua`（Studio `B13_visitors`）+ `OrbitShared.VisitorShow` + `StarterPlayerScripts.Visitors`
+- 每家 `Home_K.Visitors` 3 人（6 家共 18 人、342 件），Web Demo 同款配色，站在发射台周围面朝台：Visitor_Leo (−3, −38) 黄帽蓝衣黑裤、Visitor_Mia (12, −32) 粉帽绿衣蓝裤、Visitor_Sam (−17, −14) 白帽紫衣藏青裤（家园本地坐标）。标准 R15 体型（和玩家一样大，高 5.5），帽子 = 帽顶球 + 深色帽箍 + 前檐，焊在头上；名字牌用 Humanoid 显示名（60 格内）。全部不碰撞、不触发；模型 `ModelStreamingMode = Atomic`。
+- **R15 生成注意**：`Players:CreateHumanoidModelFromDescription` 现在生成的关节是 AnimationConstraint（物理约束，服务器模拟）+ 布娃娃球窝，客户端本地改 Transform 看不到。建造脚本把它们换成同名 Motor6D（C0 / C1 取两头的 RigAttachment），删掉 Animator（否则会清掉 Transform）、脚本和约束；只有 HumanoidRootPart 锚定。属性 HomeCF（脚底站位）、GroundOffset（根部离脚底 3.01）、Home；标签 Visitor。
+- 动作 `VisitorShow`（客户端，Web Demo updateSpectators / updateRagdoll，距离和速度 × 1.3）：
+  - 待机：双臂轻摆、轻微呼吸、低头看台子。
+  - 欢呼 `VS.cheer(pos, dur)`：双手举过头挥、原地蹦、抬头看天；pos 60 格内的访客。
+  - 掀翻 `VS.knock(pos, power)`：半径 32.5 内被抛起（越近越猛），背朝冲击方向空中翻滚、四肢乱甩；落地太猛弹一下 + 尘土 → 仰面摊开躺 1.4 s → 0.45 s 爬起 → 走回原位（11.7 格/秒，摆臂迈腿）→ 转回面朝发射台；被掀翻期间攒下的欢呼回到原位后接着做。撞墙或下一步脚下没地面（岛边、桥边）时水平速度反弹，不会飞出岛。
+  - 挂钩：LaunchShow 点火（超级：knock 48 + 欢呼 3 s；完美 2 s；普通 1.5 s；熄火 1 s）、CatchShow 落台（完美 2 s，连击 ≥ 3 为 3 s；良好 1.5 s）、CrashShow 爆炸（knock 30 + 欢呼 2.5 s）。没 `VS.start()` 时这些调用什么都不做（编辑模式逐帧检查不受影响）。
+  - 相机 260 格外、又没在演出中的访客不更新。
+  - 射线要排除所有访客模型：新版 R15 身体件即使 CanQuery = false，客户端射线仍会命中，第一次测试访客被自己的躯干挡住，横向只飞出 3 格。
+- 仅 Studio：`workspace._VisitorDebug`（BindableEvent）`:Fire("knock", pos, power)` / `("cheer", pos, dur)` / `("dump")`（状态写回属性 Dump），给命令栏 / MCP 测试用（它们在另一个 require 实例里，拿不到模块状态）。
+- 检查：Edit 截图站位和造型；Play 超级发射力度实测：Leo 飞出 28 格（落在桥面）、Mia 20 格（岛边弹回）、Sam 18 格，约 7 s 后全部走回原位；P1Demo 完整一轮：完美发射欢呼 → 超级发射掀翻 → 回位欢呼 → 坠毁再掀翻 → 回位欢呼，控制台无报错。
+- 设计里写「布娃娃用引擎物理」：没用。根部锚定 + 程序化翻滚（和 Web Demo 一样）在客户端完全可控、不会卡进地形，也不用服务器参与；需要真物理时再议。
+
+**第 20 项 广场内容（✅ 11-26 做完，待验收）** `world/12_plaza.lua`（Studio `B12_plaza`）→ `OrbitWorld.PlazaContent`（239 件）
+- 火箭雕塑：中央圆台（台面 y 1.45）上立石墨色底座（Ø10 + 金色饰环 + Ø8.4 顶板），上面一枚 RocketKit 火箭（气动鼻锥 + 巨型燃料舱 + 等离子发动机 + 基础尾翼，Web Demo 同款），放大 1.6 倍，金色主色，客户端 SpinFX 0.15 缓慢自转；四周 6 盏青色地灯（SpotLight 朝上照雕塑）。
+- 公共商店位 ×3：在 30° / 150° / 270°（两座桥之间的空档，P0 定），半径 40、正面朝广场中心，光柱在店后。造型和家园店位同一套（白色小屋 + 卷帘门 + 黄框）放大一号，加条纹遮阳棚、柜台和「即将开放 · 公共商店」招牌，三家点缀色 金 / 青 / 粉。商店内容待商业化设计决定。
+
+**第 21 项 全局氛围 · 流星（✅ 11-26 做完，待验收）** `StarterPlayerScripts.Meteors`（本地 `studio/client/Meteors.client.lua`）
+- 客户端每 2–6.5 s 在远空随机生成一颗流星：Neon 发光头（8 格，远在 1200–1500 格外要够大）+ 拖尾（约 180 格），1.2 s 划过，亮度先亮后暗；数值沿用 Web Demo（出生在半径 900、高 450–1150 的天球上，速度 760，斜向下）× 1.3。放在 `Workspace._Meteors`（不存档），不进物理。
+- 「从邻居家能读懂星球特征」：月球 / 木星（锁定紫盾、解锁全彩 + 行星环）在 P0 已可从各家看到，本项没有另改。
+
