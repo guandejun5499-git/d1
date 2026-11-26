@@ -95,7 +95,9 @@ local function demoLaunch(judge)
 	S:destroy()
 	-- 第 15 项：接着飞
 	local rocket = launchArea:FindFirstChild("PadRocket")
-	local F = FS.prepare(rocket, S.home, { { body = "moon", orbits = 2, fever = { [2] = judge ~= "stall" } } }, { launchArea = launchArea })
+	-- 起飞前的比例和支架夹紧角都由 LaunchShow 记下，交给飞行（宽火箭降落时支架不能合到 0）
+	local F = FS.prepare(rocket, S.home, { { body = "moon", orbits = 2, fever = { [2] = judge ~= "stall" } } },
+		{ launchArea = launchArea, scale0 = S.scale0, catchClosed = S.catchPose0 })
 	F:play()
 	FX.puff(S.base + Vector3.new(0, 1.5, 0), 16, Color3.fromRGB(214, 217, 234), 8, 3, { life = 1.4, influence = 1 })
 	F:cleanup()

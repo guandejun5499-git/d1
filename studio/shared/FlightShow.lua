@@ -180,7 +180,8 @@ function FS.prepare(rocket, padCF, legs, opts)
 	local S = { rocket = rocket, padCF = padCF, legs = legs, opts = opts, events = {}, ei = 1, segs = {} }
 	local speed = opts.speed or 1.2
 	local padTop = padCF.Position
-	S.scale0 = opts.scale0 or 1
+	-- 原尺寸：调用方传入（接着 LaunchShow 时火箭已放大，要传它记下的起飞前比例）；从台面起飞时就是当前比例
+	S.scale0 = opts.scale0 or (opts.fromPad and rocket:GetScale()) or 1
 	S.flightScale = RK.FLIGHT_SCALE
 	local t = 0
 	local function add(sg)
@@ -252,7 +253,9 @@ function FS.prepare(rocket, padCF, legs, opts)
 	-- 回收支架：从台面起飞时先张开；降落时张开，落地瞬间合拢
 	local area = opts.launchArea or (rocket.Parent and rocket.Parent:FindFirstChild("CatchArms") and rocket.Parent)
 	S.catch = area and area:FindFirstChild("CatchArms")
-	S.catchClosed = opts.catchClosed or 0
+	-- 落地后的合拢角：调用方传入（宽火箭不能合到 0，见 AssemblyShow.closeAlpha）；
+	-- 从台面起飞时支架还在原来的夹紧姿态，直接读它
+	S.catchClosed = opts.catchClosed or (opts.fromPad and S.catch and S.catch:GetAttribute("Pose")) or 0
 	S.fever = false
 	S.lastQ = rocket:GetPivot() - rocket:GetPivot().Position
 	return setmetatable(S, { __index = FS })
@@ -326,7 +329,11 @@ function FS.at(S, t)
 		if sg.type == "ascent" and u < 0.03 then target = CFrame.identity end
 	end
 	local base = S.padCF - S.padCF.Position
-	local q = S.lastQ:Lerp(target * base, 0.35)
+	-- 朝向平滑按时间算（原来每帧 0.35，帧率低时转得慢）：60 FPS 下等同 0.35 / 帧
+	local dt = S.lastT and math.clamp(t - S.lastT, 0, 0.25) or 0
+	S.lastT = t
+	local turn = (dt > 0) and (1 - 0.65 ^ (dt * 60)) or 0.35
+	local q = S.lastQ:Lerp(target * base, turn)
 	S.lastQ = q
 	-- 尺寸：降落时缩回原尺寸
 	local k = S.flightScale
