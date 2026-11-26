@@ -42,6 +42,7 @@ local RAR = {
 	{ label = "ADVANCED · 高级", top = hex("2F8CFF"), bot = hex("102C6E"), stroke = hex("6DB5FF"), rc = hex("9ED0FF") },
 	{ label = "ELITE · 精英", top = hex("FFC53D"), bot = hex("3A2508"), stroke = hex("FFE08A"), rc = hex("FFE7A3") },
 }
+P.RARITY = RAR -- 组装舱部件坞铭牌（AssemblyBay）用同一套稀有度配色
 
 local function label(parent, text, y, h, color, font, strokeT)
 	local t = Instance.new("TextLabel")
@@ -214,7 +215,7 @@ function P.buildPad(PC, slot, parent, name)
 	local pm = B.model(name or "PartPad")
 	pm:SetAttribute("Slot", slot)
 	B.cylAt(6.2, 0, 0.75, PC, { Name = "Base", Color = C.graphite }, pm)
-	B.segRing(PC * CFrame.new(0, 0.78, 0), 2.85, 20, 0.5, 0.22, 0.06, { Name = "Dash", Color = C.yellow }, pm)
+	-- 11-25 用户要求：台座底部的黄色虚线去掉
 	B.cylAt(5.0, 0.75, 1.0, PC, { Name = "Column", Color = C.white }, pm)
 	B.cylAt(5.2, 1.75, 0.18, PC, { Name = "RingLight", Color = P.RING.idle.Color }, pm)
 	local cap = B.cylAt(5.0, 1.93, 0.17, PC, { Name = "Cap", Color = C.graphite }, pm)

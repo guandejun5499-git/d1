@@ -2,11 +2,12 @@
 	Orbit Roll · 任务二 · 05 玻璃组装舱 + 运输带（家园 K）—— 原画 C2 机械科技版
 	组装舱中心 (33.8, −6.5)。底座 18 × 18 × 1.2，外框 16 × 16，舱内净高 18.8，总高约 22.1。
 	11-24 用户调整：除了门对面的 +X 墙，其余三面（−X、−Z、+Z）都是整面玻璃，前角 (−8, −8) 不设立柱；
-	−X 面中间是朝发射台的滑动舱门（5.2 × 14），「待组装」信息屏在门上方、朝舱外。
+	−X 面中间是朝发射台的伸缩舱门（11-25 P1 加宽到 10 × 14，四扇玻璃门），「待组装」信息屏在门上方、朝舱外。
 	门对面的 +X 墙是石墨机械墙：4 个部件坞（鼻锥 / 燃料舱 / 发动机 / 尾翼）、管线。
-	舱内：顶部龙门吊（横梁 + 小车 + 缆绳 + 四指抓爪）、两台焊接机械臂、中央转台（Ø7.6）+ 两侧液压支柱、
+	舱内：顶部龙门吊（横梁 + 小车 + 缆绳 + 四指抓爪）、两台焊接机械臂、中央转台（Ø7.6）、
 	转台上是待组装组合的青色全息轮廓。舱外控制台在 −Z 面。状态灯默认青色 = 待组装。
-	运输带 (26.2, −6.5) → (6.58, −21.1)（发射台边缘），从底座边缘开始，黄色箭头指向发射台。
+	11-25 P1 组装演出：龙门吊小车骑在横梁上；舱门 10 × 17.2；信息屏在屋顶边梁上。
+	运输带 (24.8, −6.5) → (18.2, −6.5) → (6.58, −21.1)（发射台边缘）：11-25 P1 改成先直行出门再斜向发射台，黄色箭头指向发射台。
 	11-25 场景放大：组装舱整体从 (26, −5) 外移到 (33.8, −6.5)，舱内相对位置不变。
 	11-24 P0：状态灯 / 门楣屏 / 部件坞 / 全息由 OrbitShared.AssemblyBay 切换（WorldPivot = 舱底中心，托盘上有 DockPoint）。
 ]]
@@ -22,8 +23,8 @@ local TARGETS = { 0, 1, 2, 3, 4, 5 }
 
 -- 邻居简化版删掉的细节件：保留底座、外框、状态灯、三面玻璃、门、机械墙、转台、龙门吊和运输带主体
 local LITE_DROP = {
-	Seam = true, Hazard = true, PanelSeam = true, Pipe = true, ScreenFrame = true, InfoScreen = true,
-	Docks = true, Strut = true, StrutRod = true, StrutCap = true, Dash = true, HoloPreview = true,
+	Seam = true, Hazard = true, PanelSeam = true, Pipe = true, ScreenFrame = true, InfoScreen = true, ScreenPost = true,
+	Docks = true, Dash = true, HoloPreview = true,
 	WeldArm_A = true, WeldArm_B = true, Console = true, Roller = true, Chevron = true, DoorSeam = true,
 }
 
@@ -48,12 +49,7 @@ local function build(K, LITE)
 	for i = -3, 3 do
 		B.box(V(15.6, 0.06, 0.12), Bc(0, 1.23, i * 2.2), { Name = "Seam", Color = C.graphite }, m)
 	end
-	for side = 0, 3 do
-		local rot = BAY * CFrame.Angles(0, side * math.pi / 2, 0)
-		for i = 0, 11 do
-			B.box(V(0.55, 0.95, 0.06), rot * CFrame.new(-8.25 + i * 1.5, 0.6, -9.03) * CFrame.Angles(0, 0, math.rad(35)), { Name = "Hazard", Color = C.yellow }, m)
-		end
-	end
+	-- 11-25 用户要求：底座四周的黄色斜纹警示块去掉
 
 	------------------------------------------------------------------ 外框（前角无立柱）
 	for _, p in ipairs({ { 8, 8 }, { 8, -8 }, { -8, 8 } }) do
@@ -83,23 +79,33 @@ local function build(K, LITE)
 		B.box(V(0.25, 18.8, 0.3), Bc(x, 10.6, 8), { Name = "Mullion", Color = C.white }, m)
 	end
 	B.box(V(16.6, 0.9, 0.9), Bc(0, 1.65, 8), { Name = "Sill", Color = C.white }, m)
-	-- −X 面：门两侧和门上方玻璃
-	B.box(V(0.2, 18.8, 5.4), Bc(-8, 10.6, -5.3), GLASS, m)
-	B.box(V(0.2, 18.8, 5.4), Bc(-8, 10.6, 5.3), GLASS, m)
-	-- 门上方是实心石墨门楣（信息屏挂在上面；挂在半透明玻璃前时 SurfaceGui 文字会被玻璃的渲染排序吃掉）
-	B.box(V(0.4, 4.8, 5.2), Bc(-8, 17.6, 0), { Name = "DoorHeader", Color = C.graphite }, m)
-	B.box(V(0.9, 0.9, 5.4), Bc(-8, 1.65, -5.3), { Name = "Sill", Color = C.white }, m)
-	B.box(V(0.9, 0.9, 5.4), Bc(-8, 1.65, 5.3), { Name = "Sill", Color = C.white }, m)
-	-- 滑动舱门 5.2 × 14（黄框）
+	-- −X 面：门两侧和门上方玻璃（11-25 P1：门洞从 5.2 加宽到 10，三档火箭带尾翼约 8.2 宽也能出舱）
+	B.box(V(0.2, 18.8, 3), Bc(-8, 10.6, -6.5), GLASS, m)
+	B.box(V(0.2, 18.8, 3), Bc(-8, 10.6, 6.5), GLASS, m)
+	-- 门上方是实心石墨门楣（信息屏在屋顶边上：挂在半透明玻璃前时 SurfaceGui 文字会被玻璃的渲染排序吃掉）
+	B.box(V(0.4, 1.4, 10), Bc(-8, 19.3, 0), { Name = "DoorHeader", Color = C.graphite }, m)
+	B.box(V(0.9, 0.9, 3), Bc(-8, 1.65, -6.5), { Name = "Sill", Color = C.white }, m)
+	B.box(V(0.9, 0.9, 3), Bc(-8, 1.65, 6.5), { Name = "Sill", Color = C.white }, m)
+	-- 伸缩舱门 10 × 17.2（黄框，门顶 18.4：最高的组合 = 等离子发动机 + 巨型燃料舱 + 气动鼻锥尖刺，连转台约 18.05）
+	-- 四扇 2.5 宽的玻璃门，打开时两两叠到两侧玻璃外面
+	-- 每扇门（和它的黄色边条）带 OpenOffset 属性 = 全开时的舱本地位移，组装演出（AssemblyShow）按它滑动
 	local door = B.model("Door", m)
-	B.box(V(0.4, 14, 0.35), Bc(-8, 8.2, -2.6), { Name = "DoorFrame", Color = C.yellow }, door)
-	B.box(V(0.4, 14, 0.35), Bc(-8, 8.2, 2.6), { Name = "DoorFrame", Color = C.yellow }, door)
-	B.box(V(0.4, 0.35, 5.55), Bc(-8, 15.2, 0), { Name = "DoorFrame", Color = C.yellow }, door)
+	B.box(V(0.4, 17.2, 0.35), Bc(-8, 9.8, -5), { Name = "DoorFrame", Color = C.yellow }, door)
+	B.box(V(0.4, 17.2, 0.35), Bc(-8, 9.8, 5), { Name = "DoorFrame", Color = C.yellow }, door)
+	B.box(V(0.4, 0.35, 10.35), Bc(-8, 18.4, 0), { Name = "DoorFrame", Color = C.yellow }, door)
 	local leafProps = table.clone(GLASS)
 	leafProps.Name = "DoorLeaf"
-	B.box(V(0.15, 13.8, 2.55), Bc(-8.05, 8.1, -1.3), leafProps, door)
-	B.box(V(0.15, 13.8, 2.55), Bc(-8.05, 8.1, 1.3), leafProps, door)
-	B.box(V(0.2, 13.8, 0.12), Bc(-8.1, 8.1, 0), { Name = "DoorSeam", Color = C.yellow }, door)
+	for _, s in ipairs({ -1, 1 }) do
+		-- { 关闭时 z, 打开时 z, 向外让开的距离 }：外扇叠在里扇外面
+		for _, l in ipairs({ { 1.25, 6.3, 0.55 }, { 3.75, 6.0, 0.3 } }) do
+			local off = V(-l[3], 0, s * (l[2] - l[1]))
+			local leaf = B.box(V(0.15, 17.0, 2.45), Bc(-8.05, 9.7, s * l[1]), leafProps, door)
+			leaf:SetAttribute("OpenOffset", off)
+			local edge = B.box(V(0.2, 17.0, 0.1), Bc(-8.1, 9.7, s * (l[1] - 1.22)), { Name = "DoorEdge", Color = C.yellow }, door)
+			edge:SetAttribute("OpenOffset", off)
+		end
+	end
+	B.box(V(0.2, 17.0, 0.12), Bc(-8.1, 9.7, 0), { Name = "DoorSeam", Color = C.yellow }, door)
 
 	------------------------------------------------------------------ 机械墙（只有门对面的 +X 墙）
 	B.box(V(0.6, 18.8, 16), Bc(8, 10.6, 0), { Name = "MechWall", Color = C.graphite }, m)
@@ -115,14 +121,16 @@ local function build(K, LITE)
 	end
 	B.cyl(0.6, 15.8, Bc(7.25, 9.1, -7.1), { Name = "Pipe", Color = C.white }, m)
 	B.cyl(0.45, 15.8, Bc(7.3, 9.1, 7.1), { Name = "Pipe", Color = C.orange }, m)
-	-- 「待组装」信息屏：门上方，朝舱外（−X，面向家园中心和走来的玩家）
-	B.box(V(0.3, 3.4, 5.4), Bc(-8.3, 17.6, 0), { Name = "ScreenFrame", Color = C.graphite3 }, m)
-	B.box(V(0.1, 3, 5), Bc(-8.5, 17.6, 0), { Name = "InfoScreen", Color = B.hex("1D5E74") }, m)
+	-- 「待组装」信息屏：立在门这一侧的屋顶边梁上（11-25 门加高后挪上来），朝舱外（−X，面向家园中心和走来的玩家）
+	B.box(V(0.3, 2.8, 5.8), Bc(-8.3, 23.0, 0), { Name = "ScreenFrame", Color = C.graphite3 }, m)
+	B.box(V(0.1, 2.5, 5.4), Bc(-8.5, 23.0, 0), { Name = "InfoScreen", Color = B.hex("1D5E74") }, m)
+	for _, z in ipairs({ -2.2, 2.2 }) do
+		B.box(V(0.3, 0.3, 0.3), Bc(-8.3, 21.5, z), { Name = "ScreenPost", Color = C.graphite3 }, m)
+	end
 	-- 文字由 AssemblyBay.setStatus 写（建完后设为「待组装 0 / 4」）
 
 	------------------------------------------------------------------ 部件坞（+X 墙，4 个）
 	local docks = B.model("Docks", m)
-	local DOCK_NAMES = { "鼻锥", "燃料舱", "发动机", "尾翼" }
 	for i, z in ipairs({ -5.4, -1.8, 1.8, 5.4 }) do
 		local dk = B.model("Dock_" .. i, docks)
 		local tray = B.box(V(2.8, 0.35, 3.0), Bc(6.2, 4.2, z), { Name = "Tray", Color = C.white }, dk)
@@ -138,31 +146,28 @@ local function build(K, LITE)
 		B.box(V(2.2, 0.05, 0.12), Bc(6.2, top, z + 1.1), o, dk)
 		B.box(V(0.12, 0.05, 2.2), Bc(5.1, top, z), o, dk)
 		B.box(V(0.12, 0.05, 2.2), Bc(7.3, top, z), o, dk)
-		local plate = B.box(V(0.1, 0.6, 2.2), Bc(7.62, 6.1, z), { Name = "Label", Color = C.graphite3 }, dk)
-		B.surfaceText(plate, Enum.NormalId.Left, { { text = DOCK_NAMES[i], color = B.hex("CFEFFF") } }, { pps = 50, lightInfluence = 0 })
+		-- 铭牌（11-25 加大、挪到托盘部件上方）：内容由 AssemblyBay.setDock 画——空位写部位名，放入部件后按稀有度变色
+		B.box(V(0.1, 1.5, 3.2), Bc(7.62, 8.0, z), { Name = "Label", Color = C.graphite3 }, dk)
 		dk:SetAttribute("Slot", ({ "nose", "tank", "engine", "fins" })[i])
 	end
 
-	------------------------------------------------------------------ 转台 + 液压支柱 + 全息
+	------------------------------------------------------------------ 转台 + 全息（11-25 P1：去掉两侧液压支柱，纯装饰、挡火箭出舱）
 	B.cylAt(9.4, 1.2, 0.3, BAY, { Name = "TurntableRing", Color = C.yellow }, m)
 	B.cylAt(7.6, 1.2, 0.5, BAY, { Name = "Turntable", Color = C.graphite }, m)
 	B.segRing(BAY * CFrame.new(0, 1.73, 0), 2.9, 16, 0.6, 0.18, 0.05, { Name = "Dash", Color = C.yellow }, m)
-	for _, x in ipairs({ -4.9, 4.9 }) do
-		B.cylAt(1.1, 1.2, 3.0, Bc(x, 0, 0), { Name = "Strut", Color = C.metal }, m)
-		B.cylAt(0.6, 4.2, 1.6, Bc(x, 0, 0), { Name = "StrutRod", Color = C.white }, m)
-		B.cylAt(1.0, 5.8, 0.3, Bc(x, 0, 0), { Name = "StrutCap", Color = C.graphite }, m)
-	end
 	m.WorldPivot = BAY -- 运行态模块（OrbitShared.AssemblyBay）以舱底中心为基准
 	AB.setHolo(m, { nose = 1, tank = 1, engine = 1, fins = 1 }, HOME_COLOR) -- 青色全息，客户端自转
 
 	------------------------------------------------------------------ 龙门吊
+	-- 11-25 P1：小车骑在横梁上面（原来吊在横梁下面），缆绳从横梁底面 18.9 放下，抓爪最高可到 18.35，
+	-- 最高的组合（连转台约 18.05）也吊得进；照明灯挂在抓爪上，跟着移动
 	local crane = B.model("Gantry", m)
 	B.box(V(1.0, 1.0, 16), Bc(0, 19.4, 0), { Name = "Beam", Color = C.orange }, crane)
 	B.box(V(1.6, 0.6, 1.0), Bc(0, 19.9, -7.6), { Name = "EndTruck", Color = C.graphite }, crane)
 	B.box(V(1.6, 0.6, 1.0), Bc(0, 19.9, 7.6), { Name = "EndTruck", Color = C.graphite }, crane)
-	local trolley = B.box(V(2.4, 1.2, 2.4), Bc(0, 18.3, 0), { Name = "Trolley", Color = C.graphite }, crane)
-	B.cylAt(0.15, 15.7, 2.0, BAY, { Name = "Cable", Color = C.graphite3 }, crane)
-	B.box(V(2.2, 0.5, 2.2), Bc(0, 15.45, 0), { Name = "Claw", Color = C.graphite }, crane)
+	B.box(V(2.4, 1.0, 2.4), Bc(0, 20.4, 0), { Name = "Trolley", Color = C.graphite }, crane)
+	B.cylAt(0.15, 15.7, 3.2, BAY, { Name = "Cable", Color = C.graphite3 }, crane)
+	local trolley = B.box(V(2.2, 0.5, 2.2), Bc(0, 15.45, 0), { Name = "Claw", Color = C.graphite }, crane)
 	for _, p in ipairs({ { 0.8, 0.8 }, { -0.8, 0.8 }, { 0.8, -0.8 }, { -0.8, -0.8 } }) do
 		B.box(V(0.3, 1.4, 0.3), Bc(p[1], 14.5, p[2]), { Name = "Finger", Color = C.orange }, crane)
 	end
@@ -191,8 +196,10 @@ local function build(K, LITE)
 			B.ball(0.95, CFrame.new(p), { Name = "Joint", Color = C.orange }, a)
 		end
 	end
-	robotArm("WeldArm_A", -5.2, 5.2)
-	robotArm("WeldArm_B", 3.2, -5.8)
+	-- 11-25 P1：两台臂挪到尾翼之间的空档（舱的 +Z / −Z 两侧），焊枪尖正好在燃料舱外壁（半径 2.4），
+	-- 装好的尾翼（45° 方向）不会穿过机械臂；出舱前臂向 +X 收起（AssemblyShow）
+	robotArm("WeldArm_A", 0, 6.3)
+	robotArm("WeldArm_B", 0, -6.3)
 
 	------------------------------------------------------------------ 舱外控制台（−Z 面）
 	local con = B.model("Console", m)
@@ -205,39 +212,47 @@ local function build(K, LITE)
 	}, { pps = 50 })
 
 	------------------------------------------------------------------ 运输带
+	-- 11-25 P1：折线两段——先从舱门直行 6.6 再斜向发射台（宽火箭出门时不会擦到门框），转角盖一块圆台
+	-- 每段一个 Seg_i（Belt 本地 −Z 指向下一段），组装演出按段滚动箭头和滚筒
 	local cv = B.model("Conveyor", m)
-	local S, E = V(26.2, 0, -6.5), V(6.58, 0, -21.1) -- E = 发射台 (0, −26) 朝舱方向 8.2 处
-	local d = (E - S).Unit
-	local s0 = S + d * 1.8 -- 从底座边缘开始
-	local len = (E - s0).Magnitude
-	local mid = (s0 + E) / 2
-	local CV = H * CFrame.lookAt(mid, mid + d) -- 本地 −Z 指向发射台
-	B.box(V(3.4, 0.6, len), CV * CFrame.new(0, 0.3, 0), { Name = "Belt", Color = C.graphite }, cv)
-	for _, x in ipairs({ -1.8, 1.8 }) do
-		B.box(V(0.25, 0.7, len), CV * CFrame.new(x, 0.35, 0), { Name = "Lip", Color = C.graphite2 }, cv)
-	end
-	for z = -len / 2 + 0.5, len / 2 - 0.5, 1 do
-		B.box(V(3.2, 0.03, 0.1), CV * CFrame.new(0, 0.615, z), { Name = "Roller", Color = C.graphite3 }, cv)
-	end
-	for zc = -len / 2 + 1.6, len / 2 - 1.2, 2.2 do
-		local apex = (CV * CFrame.new(0, 0.63, zc - 0.55)).Position
-		for _, sx in ipairs({ -0.95, 0.95 }) do
-			local tail = (CV * CFrame.new(sx, 0.63, zc + 0.35)).Position
-			B.beamBetween(apex, tail, 0.35, 0.05, { Name = "Chevron", Color = C.yellow }, cv)
+	local PTS = { V(24.8, 0, -6.5), V(18.2, 0, -6.5), V(6.58, 0, -21.1) } -- 舱底边缘 → 转角 → 发射台 (0, −26) 朝舱方向 8.2 处
+	for i = 1, #PTS - 1 do
+		local a, b = PTS[i], PTS[i + 1]
+		local d = (b - a).Unit
+		local len = (b - a).Magnitude
+		local mid = (a + b) / 2
+		local CV = H * CFrame.lookAt(mid, mid + d) -- 本地 −Z 指向发射台
+		local sg = B.model("Seg_" .. i, cv)
+		B.box(V(3.4, 0.6, len), CV * CFrame.new(0, 0.3, 0), { Name = "Belt", Color = C.graphite }, sg)
+		for _, x in ipairs({ -1.8, 1.8 }) do
+			B.box(V(0.25, 0.7, len), CV * CFrame.new(x, 0.35, 0), { Name = "Lip", Color = C.graphite2 }, sg)
+		end
+		for z = -len / 2 + 0.5, len / 2 - 0.5, 1 do
+			B.box(V(3.2, 0.03, 0.1), CV * CFrame.new(0, 0.615, z), { Name = "Roller", Color = C.graphite3 }, sg)
+		end
+		for zc = -len / 2 + 1.6, len / 2 - 1.2, 2.2 do
+			local apex = (CV * CFrame.new(0, 0.63, zc - 0.55)).Position
+			for _, sx in ipairs({ -0.95, 0.95 }) do
+				local tail = (CV * CFrame.new(sx, 0.63, zc + 0.35)).Position
+				B.beamBetween(apex, tail, 0.35, 0.05, { Name = "Chevron", Color = C.yellow }, sg)
+			end
 		end
 	end
+	B.cylAt(4.4, 0, 0.68, H * CFrame.new(PTS[2]), { Name = "TurnPlate", Color = C.graphite2 }, cv)
+	B.cylAt(3.6, 0.68, 0.03, H * CFrame.new(PTS[2]), { Name = "TurnRing", Color = C.yellow }, cv)
 
 	------------------------------------------------------------------ 细节件不碰撞
 	local DECO = {
 		Floor = true, Seam = true, Hazard = true, Accent = true, StatusLight = true, PanelSeam = true, Pipe = true,
 		ScreenFrame = true, InfoScreen = true, EmptyOutline = true, Label = true, Dash = true, Cable = true,
-		Roller = true, Chevron = true, DoorSeam = true, TurntableRing = true,
+		Roller = true, Chevron = true, DoorSeam = true, DoorEdge = true, TurntableRing = true, TurnRing = true,
 	}
 	for _, x in ipairs(m:GetDescendants()) do
 		if x:IsA("BasePart") and DECO[x.Name] then B.deco(x) end
 	end
 
 	AB.setStatus(m, "staging", 0) -- 状态灯青 + 门楣屏「待组装 0 / 4」
+	for i = 1, 4 do AB.setDock(m, i, nil) end -- 部件坞空位 + 铭牌「空位」
 	if LITE then B.lite(m, LITE_DROP) end
 	m.Parent = folder
 end
