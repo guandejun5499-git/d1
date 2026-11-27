@@ -253,6 +253,7 @@ end
 
 -- 一次冲击：power 1 ≈ 普通发射；dur 内至少保持 0.7 × 强度
 function FX.shake(pos, power, dur)
+	if game:GetService("GuiService").ReducedMotionEnabled then return end
 	if not RunService:IsRunning() or not RunService:IsClient() then return end
 	ensureBound()
 	local a = (power or 1) * falloff(pos)
@@ -266,6 +267,7 @@ end
 
 -- 持续轻震：每帧调用，停止调用 0.1 s 后自动消失
 function FX.rumble(pos, level)
+	if game:GetService("GuiService").ReducedMotionEnabled then return end
 	if not RunService:IsRunning() or not RunService:IsClient() then return end
 	ensureBound()
 	-- 直接覆盖：强度跟着本帧的 level 走，可以渐弱（升空余震）；一次性冲击的保底在 hold 里，互不影响

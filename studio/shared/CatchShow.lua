@@ -122,7 +122,7 @@ function C.land(S, u, dur)
 	end
 	-- 支架：降落时张开，到「接住」时刻 0.12 s 合拢（没接住就一直张开）
 	if S.arms then
-		local lead = C.CATCH_BEFORE[S.result]
+		local lead = S.inputLead or C.CATCH_BEFORE[S.result]
 		if lead then
 			local uc = 1 - lead / dur
 			if u >= uc and not S.closeTo then
