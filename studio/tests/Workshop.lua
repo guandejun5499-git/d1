@@ -32,7 +32,8 @@ return function(W,Rules)
 	w=d.workshop
 	assert(w.staged.tank==2 and w.pad.tank==1 and w.guide=="tank")
 	apply("assemble")
-	assert(w.pad.tank==2 and not w.staged.tank and w.guide=="second")
+	-- staged stays as the rocket on the pad (inventory: bag + staged)
+	assert(w.pad.tank==2 and w.staged.tank==2 and w.guide=="second")
 	assert(#Rules.performance(w.pad).laps==2)
 	W.landed(w,"moon")
 	assert(w.guide=="free")
@@ -45,20 +46,27 @@ return function(W,Rules)
 	w.offers.tank=3
 	w.sold.tank=false
 	apply("buy","tank",3)
-	for _,s in {"nose","fins"} do apply("stage",s,1) end
 	apply("stage","tank",3)
-	denied("assemble")
-	apply("stage","engine",1)
-	denied("assemble") -- too heavy
+	assert(w.bag.tank_2==1 and w.bag.tank_3==0)
+	denied("assemble") -- basic + giant + basic + basic is too heavy
 	apply("stage","engine",3)
 	assert(w.jupiter and not w.reachedJupiter)
 	apply("stage","engine",0)
 	assert(w.jupiter and w.bag.engine_3==1 and w.bag.engine_0==nil)
+	denied("assemble") -- missing engine
 	apply("stage","engine",3)
 	apply("assemble")
-	assert(w.bag.tank_2==1 and w.pad.tank==3)
+	assert(w.bag.tank_2==1 and w.pad.tank==3 and w.pad.engine==3)
 	W.landed(w,"jupiter")
 	assert(w.reachedJupiter)
+	-- regression: swap one slot and keep the elite parts already on the rocket
+	w.offers.nose=2
+	w.sold.nose=false
+	apply("buy","nose",2)
+	apply("stage","nose",2)
+	apply("assemble")
+	assert(w.pad.nose==2 and w.pad.tank==3 and w.pad.engine==3)
+	assert(w.bag.nose_2==0 and w.bag.tank_3==0 and w.bag.engine_3==0 and w.bag.tank_2==1)
 	for _,cost in {50,140,320} do
 		local before=d.coins
 		apply("upgrade")
@@ -69,6 +77,15 @@ return function(W,Rules)
 	w.offers.fins=2
 	w.sold.fins=false
 	denied("buy","fins",2)
+	-- stock 1 saves: pad parts lived outside bag and staged
+	local old={coins=0,flights=4,workshop={revision=7,level=1,rolls=3,bag={tank_2=1},pity={},offers={},sold={},
+		staged={nose=2},pad={nose=1,tank=3,engine=3,fins=1},guide="free",jupiter=true,reachedJupiter=true}}
+	W.initialize(old)
+	local ow=old.workshop
+	assert(ow.stock==2 and ow.staged.nose==2 and ow.staged.tank==3 and ow.staged.engine==3 and ow.staged.fins==1)
+	assert(ow.bag.tank_2==1 and ow.bag.tank_3==nil and ow.bag.engine_3==nil)
+	W.initialize(old) -- migration runs once
+	assert(ow.staged.tank==3 and ow.bag.tank_3==nil)
 	local legacy=fresh(3)
 	assert(legacy.workshop.pad.tank==1 and legacy.workshop.guide=="roll")
 	d=legacy

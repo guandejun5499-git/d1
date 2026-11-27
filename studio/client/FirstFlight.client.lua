@@ -137,11 +137,21 @@ local function restore()
 	local char=player.Character
 	if char then camera.CameraSubject=char:FindFirstChildOfClass("Humanoid") end
 end
+local RECEIPT_TIMEOUT=20
 local function finish()
-	if not visualDone or not received then return end
-	local rows,dust,bonus,total,result,firstJupiter=table.unpack(received)
+	if not visualDone then return end
+	if not received then
+		-- No answer from the server in time: finish the landing anyway so the player is not stuck
+		tell("结算未完成 · 金币以服务器存档为准，稍后会自动同步")
+		action(nil)
+		phase="pad"
+		padPrompt.Enabled=true
+		work:controls()
+		return
+	end
+	local rows,dust,bonus,total,result,firstJupiter,saved=table.unpack(received,1,7)
 	local labels={perfect="完美接住",great="良好接住",early="提前接住",crash="残骸回收"}
-	local lines={firstJupiter and "首次木星飞行！" or "飞行回收"}
+	local lines={saved==false and "保存失败 · 本趟收益未入账，即将断开重连" or firstJupiter and "首次木星飞行！" or "飞行回收"}
 	for i,r in rows do table.insert(lines,("第 %d 圈  %s   +%d"):format(i,r.grade,r.coins)) end
 	table.insert(lines,("星尘 +%d    %s +%d\n合计  +%d 金币"):format(dust,labels[result],bonus,total))
 	if result=="perfect" and streak>=1 then
@@ -151,7 +161,7 @@ local function finish()
 	end
 	receipt.Text=table.concat(lines,"\n")
 	receipt.Visible=true
-	tell(("奖励已到账 · %s"):format(work:hint()))
+	tell(saved==false and "存档连接中断 · 本趟收益未保存，即将断开，请重新加入" or ("奖励已到账 · %s"):format(work:hint()))
 	action("领取")
 	phase="receipt"
 end
@@ -224,8 +234,11 @@ local function release()
 	if phase=="charge" and holding then holding=nil fire("release") end
 end
 Input.InputEnded:Connect(function(i) if i==holding or (holding and i.UserInputType==Enum.UserInputType.MouseButton1) then release() end end)
-net.OnClientEvent:Connect(function(kind,a,b,c,d,e,f)
-	if kind=="workshop" then
+net.OnClientEvent:Connect(function(kind,a,b,c,d,e,f,g)
+	if kind=="full" then
+		-- First-flight slice runs one player on Home_0; keep syncing so this client takes over when it frees up
+		if not work.data then tell("首飞测试版同一时间只支持 1 名玩家 · 正在等待空位（也可换一个服务器加入）") end
+	elseif kind=="workshop" then
 		if b=="init" then phase=a.pad and "pad" or "bay" end
 		work:update(a,b,c,d,e,f)
 	elseif kind=="retry" then
@@ -282,7 +295,7 @@ net.OnClientEvent:Connect(function(kind,a,b,c,d,e,f)
 	elseif kind=="shard" then
 		if a==lapIndex and shards[b] then SD.collect(shards[b]) local g=showGate(plan.laps[a].body) if g then G.setState(g,"boost") end end
 	elseif kind=="receipt" then
-		received={a,b,c,d,e,f}
+		received={a,b,c,d,e,f,g}
 		finish()
 	end
 end)
@@ -352,9 +365,11 @@ Run.RenderStepped:Connect(function()
 			phase="landing"
 			action(nil)
 			task.spawn(function()
-				-- Allow the server to confirm a last-frame catch before choosing crash FX.
-				while not received do task.wait() end
-				if received[5]=="crash" then crash.play(area,flight.rocket) else task.wait(.3) end
+				-- Allow the server to confirm a last-frame catch before choosing crash FX (bounded wait).
+				local waited=os.clock()
+				while not received and os.clock()-waited<RECEIPT_TIMEOUT do task.wait() end
+				local result=received and received[5] or landing or "crash"
+				if result=="crash" then crash.play(area,flight.rocket) else task.wait(.3) end
 				flight:cleanup()
 				flight=nil
 				restore()

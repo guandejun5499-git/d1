@@ -5,20 +5,43 @@ local Arms = require(shared.CatchArms)
 local Workshop = {}
 
 -- Numeric tiers match the existing art modules. Bag keys identify both slot and tier.
+local function adjust(w,slot,tier,delta)
+	if not tier or tier <= 1 then return end
+	local key = slot.."_"..tier
+	w.bag[key] = (w.bag[key] or 0) + delta
+end
+
+-- Inventory invariant (stock 2): every owned non-basic part is either in the bag or in a staged slot.
+-- The pad is a snapshot of the staged set at assembly time, so its parts are not counted a second time.
+-- Stock 1 cleared `staged` on assembly and kept the pad's parts outside both the bag and staged.
+local STOCK = 2
+local function migrate(w)
+	if (w.stock or 1) >= STOCK then return end
+	if w.pad then
+		for _,slot in Parts.SLOTS do
+			local onPad = w.pad[slot]
+			if w.staged[slot] == nil then
+				w.staged[slot] = onPad -- the pad part becomes the staged part
+			else
+				adjust(w,slot,onPad,1) -- slot already holds another copy: return the pad part to the bag
+			end
+		end
+	end
+	w.stock = STOCK
+end
+
 function Workshop.initialize(data)
-	if data.workshop then return end
+	if data.workshop then
+		migrate(data.workshop)
+		return
+	end
 	local veteran = data.flights > 0
 	data.workshop = {
 		revision = 0, level = 1, rolls = 0, bag = {}, pity = {}, offers = {}, sold = {},
 		staged = table.clone(Rules.basic), pad = veteran and table.clone(Rules.basic) or nil,
 		guide = veteran and "roll" or "assembly", jupiter = false, reachedJupiter = false,
+		stock = STOCK,
 	}
-end
-
-local function adjust(w,slot,tier,delta)
-	if not tier or tier <= 1 then return end
-	local key = slot.."_"..tier
-	w.bag[key] = (w.bag[key] or 0) + delta
 end
 
 function Workshop.preview(staged)
@@ -87,10 +110,9 @@ function Workshop.apply(data,op,slot,tier,rng)
 	elseif op=="assemble" then
 		local _,reason = Workshop.preview(w.staged)
 		if reason then return reason end
-		if w.pad then
-			for _,s in Parts.SLOTS do adjust(w,s,w.pad[s],1) end
-		end
-		w.pad,w.staged = w.staged,{}
+		-- Staged stays as the new rocket: parts swapped out of staged already went back to the bag,
+		-- so nothing is returned here and the rocket's parts can be kept in the next build.
+		w.pad = table.clone(w.staged)
 		if w.guide=="assembly" then w.guide="launch" end
 		if w.guide=="tank" and w.pad.tank>=2 then w.guide="second" end
 	elseif op=="upgrade" then

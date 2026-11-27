@@ -19,6 +19,11 @@ local boardButton=board.UpgradeButton
 local padFrame=Build.homeFrame(0)*CFrame.new(0,0,-26)
 local owner,state
 local now=function() return workspace:GetServerTimeNow() end
+-- The P1 acceptance loop (StarterPlayerScripts.P1Demo, gated by this attribute) drives the same Home_0
+-- pad, rocket, arms and camera. The real loop supersedes it, so switch it off before any client starts.
+workspace:SetAttribute("P1Demo",false)
+local MAX_SETTLE_TRIES=5
+local closing=false
 local function send(kind,...)
 	if owner and owner.Parent then net:FireClient(owner,kind,...) end
 end
@@ -86,7 +91,26 @@ local function transact(player,s,revision,op,slot,tier)
 	if op=="assemble" then send("assemble",data.workshop.pad) end
 end
 
+-- leaderstats are created for every player (the client waits on them); values are filled for the owner
+local function stats(player)
+	local folder=player:FindFirstChild("leaderstats")
+	if not folder then
+		folder=Instance.new("Folder")
+		folder.Name="leaderstats"
+		for _,key in {"Coins","Flights"} do
+			local n=Instance.new("IntValue")
+			n.Name=key
+			n.Parent=folder
+		end
+		folder.Parent=player
+	end
+	return folder
+end
+
 local function join(player)
+	stats(player)
+	-- First-flight slice: one player uses Home_0. Others wait (the client shows a notice and keeps syncing)
+	-- and take over when the owner leaves.
 	if owner then return end
 	owner=player
 	local function spawnAtHome(character)
@@ -102,15 +126,9 @@ local function join(player)
 		return
 	end
 	if not ok or not data then player:Kick("无法取得存档，请稍后重试") return end
-	local stats=Instance.new("Folder")
-	stats.Name="leaderstats"
-	for key,value in {Coins=data.coins,Flights=data.flights} do
-		local n=Instance.new("IntValue")
-		n.Name=key
-		n.Value=value
-		n.Parent=stats
-	end
-	stats.Parent=player
+	local folder=stats(player)
+	folder.Coins.Value=data.coins
+	folder.Flights.Value=data.flights
 	showArms(data.workshop.level)
 	state={phase=data.workshop.pad and "pad" or "bay",data=data,lastInput=0}
 	player:SetAttribute("FlightHome",0)
@@ -135,6 +153,9 @@ local function gate(s,i,judge,factor)
 	s.rows[i]={grade=judge,coins=coins}
 	local chain,fever=Rules.chain(s.chain,judge)
 	s.chain=chain
+	-- Fever only lives inside the orbits: after the last gate the return and landing run at normal speed
+	-- and the client turns the rainbow orbit and trail off (same as the accepted P1 FlightShow).
+	if i==#plan.laps then fever=false end
 	if fever~=s.fever then
 		local wall=now()
 		s.clock={wall=wall,t=Rules.position(s.clock,wall),rate=fever and 1.2 or 1,slow=plan.duration-plan.catchWindow-.6}
@@ -149,39 +170,65 @@ local function settle(s,player)
 	local streak=if result=="perfect" then s.data.perfectStreak+1 else 0
 	local bonus=math.round(plan.catchBonus*(result=="crash" and .5 or s.catchFactor)*(1+.25*math.clamp(streak-1,0,4)))
 	local total=bonus+s.dust
-	for _,r in s.rows do total+=r.coins end
+	-- Only laps actually flown count (a player who leaves mid-flight is settled with what they earned)
+	local reachedJupiter=false
+	for i,r in s.rows do
+		total+=r.coins
+		if plan.laps[i].body=="jupiter" then reachedJupiter=true end
+	end
 	local ok,data
-	repeat
+	for attempt=1,MAX_SETTLE_TRIES do
 		ok,data=pcall(Profiles.change,player,function(d)
 			if d.lastFlight==s.id then return end
 			d.lastFlight=s.id
 			d.coins+=total
 			d.flights+=1
-			Workshop.landed(d.workshop,plan.route)
+			Workshop.landed(d.workshop,reachedJupiter and "jupiter" or "moon")
 			if s.judge=="super" then d.workshop.superSeen=true end
 			d.perfectStreak=streak
 			d.bestStreak=math.max(d.bestStreak,streak)
 			d.bestFlight=math.max(d.bestFlight,total)
 		end)
-		if not ok then task.wait(2) end
-	until ok
-	if data then
-		local firstJupiter=plan.route=="jupiter" and not s.wasAtJupiter
+		if ok then break end
+		if attempt<MAX_SETTLE_TRIES then task.wait(2) end
+	end
+	local saved=ok and data~=nil
+	if saved then
 		s.data=data
 		if player.Parent then
 			player.leaderstats.Coins.Value=data.coins
 			player.leaderstats.Flights.Value=data.flights
 			snapshot(s,"landed")
-			send("receipt",s.rows,s.dust,bonus,total,result,firstJupiter)
+		end
+	end
+	-- Always answer so the client can finish the landing; a failed save is reported, then the player is
+	-- sent back to rejoin (same handling as other lost-session paths).
+	if player.Parent then
+		local firstJupiter=saved and reachedJupiter and not s.wasAtJupiter
+		send("receipt",s.rows,s.dust,bonus,total,result,firstJupiter,saved)
+		if not saved then
+			task.delay(4,function()
+				if player.Parent then player:Kick("存档连接中断，本趟收益未保存，请重新加入") end
+			end)
 		end
 	end
 	s.phase="done"
 end
+local waiting={}
 net.OnServerEvent:Connect(function(player,kind,stamp,id,i,j,tier)
+	if typeof(stamp)~="number" then return end
 	local s=state
-	if player~=owner or not s then return end
 	local wall=now()
-	if typeof(stamp)~="number" or not (stamp>=wall-.45 and stamp<=wall+.08) then return end
+	if player~=owner or not s then
+		-- Not (yet) the Home_0 player: tell them once per few seconds instead of leaving them on "loading"
+		if kind=="sync" and player~=owner and wall-(waiting[player] or 0)>3 then
+			waiting[player]=wall
+			net:FireClient(player,"full")
+		end
+		return
+	end
+	-- Workshop commands and sync are not timing-judged, so a slow connection must not drop them.
+	-- Every request gets an answer (snapshot or error), so the client never stays busy.
 	if kind=="sync" then
 		if wall-(s.lastSync or 0)>.25 then s.lastSync=wall snapshot(s,"init") end
 		return
@@ -192,6 +239,8 @@ net.OnServerEvent:Connect(function(player,kind,stamp,id,i,j,tier)
 		transact(player,s,id,i,j,tier)
 		return
 	end
+	-- Timing inputs (charge / release / boost / shard / catch) are judged on their stamp, so it must be recent
+	if not (stamp>=wall-.45 and stamp<=wall+.08) then return end
 	if s.writing then
 		if kind=="charge" then send("retry","charge") end
 		return
@@ -241,17 +290,25 @@ game:GetService("RunService").Heartbeat:Connect(function()
 	end
 end)
 local function leave(player)
+	waiting[player]=nil
 	if player~=owner then return end
 	local s=state
-	if s and s.phase=="flight" and Rules.position(s.clock,now())>=plan.duration then settle(s,player) end
+	-- Leaving mid-flight keeps what was earned: laps and shards so far, no catch (counts as a crash)
+	if s and s.phase=="flight" then settle(s,player) end
 	while s and (s.phase=="saving" or s.writing) do task.wait(.1) end
-	if s then Profiles.change(player,nil,true) end
+	if s then pcall(Profiles.change,player,nil,true) end
 	owner,state=nil,nil
+	-- Hand Home_0 to the next waiting player (not while the server is shutting down)
+	if closing then return end
+	for _,p in Players:GetPlayers() do
+		if p~=player and p.Parent then task.spawn(join,p) break end
+	end
 end
 Players.PlayerAdded:Connect(join)
 Players.PlayerRemoving:Connect(leave)
 for _,p in Players:GetPlayers() do task.spawn(join,p) end
 game:BindToClose(function()
+	closing=true
 	if owner then leave(owner) end
 end)
 task.spawn(function()

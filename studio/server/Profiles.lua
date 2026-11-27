@@ -31,7 +31,7 @@ end
 function Profiles.open(player)
 	return update(player,function(data)
 		data=data or {coins=0,flights=0,bestFlight=0,perfectStreak=0,bestStreak=0}
-		if data.owner and data.owner~=session and data.expires>os.time() then return nil end
+		if data.owner and data.owner~=session and (data.expires or 0)>os.time() then return nil end
 		Workshop.initialize(data)
 		data.owner=session
 		data.expires=os.time()+180
