@@ -198,7 +198,7 @@ function FS.prepare(rocket, padCF, legs, opts)
 	local s0 = opts.fromPad and padTop or rocket:GetPivot().Position
 	local s1 = s0 + V(0, (opts.fromPad and 90 or 45) * S13, 0)
 	local s2 = e0 - tan0 * (45 * S13)
-	add({ type = "ascent", dur = (opts.fromPad and 3.6 or 2.6) / speed, pos = function(u) return bez3(s0, s1, s2, e0, 0.35 * u + 0.65 * u * u) end })
+	add({ type = "ascent", dur = opts.ascentDuration or (opts.fromPad and 3.6 or 2.6) / speed, pos = function(u) return bez3(s0, s1, s2, e0, 0.35 * u + 0.65 * u * u) end })
 	local last, lastTan = e0, tan0
 	for li, leg in ipairs(legs) do
 		local b = O.bodies[leg.body]
@@ -216,7 +216,7 @@ function FS.prepare(rocket, padCF, legs, opts)
 	local hover = padTop + V(0, 45 * S13, 0)
 	local r0, r1, r2 = last, last + lastTan * (70 * S13), hover + V(0, 60 * S13, 0)
 	add({ type = "return", dur = ((#legs > 1) and 5.8 or 4.2) / speed, pos = function(u) return bez3(r0, r1, r2, hover, u) end })
-	add({ type = "land", dur = 2.6, pos = function(u) return hover:Lerp(padTop, 1 - (1 - u) ^ 2.2) end })
+	add({ type = "land", dur = 2.6, pos = function(u) return hover:Lerp(padTop, opts.live and u or 1 - (1 - u) ^ 2.2) end })
 	S.duration = t
 	S.hover = hover
 
@@ -230,6 +230,7 @@ function FS.prepare(rocket, padCF, legs, opts)
 				local gcf = O.gateCF(b)
 				FX.ring(gcf * CFrame.Angles(math.pi / 2, 0, 0), b.gateR * 1.1, b.gateR * 2.2, sg.fever and Color3.new(1, 1, 1) or GOLD, 0.6, { width = 0.8, height = 0.3 })
 				FX.sparks(gcf.Position, 24, 1.2, { Color3.new(1, 1, 1), sg.fever and RAINBOW[(i % #RAINBOW) + 1] or GOLD })
+				if opts.live then return end
 				if sg.fever and not S.fever then
 					S:setFever(true, sg.body)
 				elseif not sg.fever and S.fever then
