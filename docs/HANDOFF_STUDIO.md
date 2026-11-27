@@ -267,7 +267,7 @@ CFrame.new(Vector3.new(math.sin(a), 0, math.cos(a)) * 122) * CFrame.Angles(0, a,
 - **11-25 第四轮（用户提议在第 3、4 套臂 / 夹爪上加助推器火焰）**：采纳但改成「姿态推进器」——支架不飞，大火焰会和火箭自己的尾焰抢戏。高阶夹头背面 2 个、旗舰锁体背壳 2 个（大一号）小喷口：金属喷管 + 本色焰锥 + 火焰粒子（白热 → 本色），平时待机；接口 `S.setThrusters(bracket, power)`（0 熄火 / 0.4 待机默认 / 1 接住瞬间全开）。另加磁吸面板火花（MagSparks）、旗舰塔顶余烬（Embers）。验收台上第 3、4 套推进器全开。
 - **11-25 第五轮（用户要求第 3、4 套底座底部加特效，参考图是底座四周喷火）**：`baseFlames()` 底座喷焰环：底座外沿一圈贴地喷口（高阶 12 个 / 旗舰 16 个），火焰朝外略向上（12°），颜色白热 → 本色 → 暗尾；地面光晕（GroundGlow：底座外 2.6 格半透明本色环 + 一道亮细环）；上升火星（BaseEmbers）。喷焰强度挂在 `S.setThrusters` 上，接住时和推进器一起变旺。参数在皮肤的 `baseFx = { r, n, size, bright }`：品红火焰叠在紫色地面上会洗成淡紫烟，所以高阶 size 1.35、Brightness 3，旗舰 size 1.25、Brightness 1.5。已知：验收台上高阶和旗舰相邻，两圈火交界处叠加发白；正式放进家园时不会相邻。
 
-## 16. P1 · 阶段一演出（11-25 开始，逐项待用户验收）
+## 16. P1 · 阶段一演出（11-25 开始，11-26 全部验收通过，场景已保存）
 
 用户 11-25 验收通过 P0，开始 P1（`3D制作计划.md` 第 12–21 项）。
 
@@ -276,7 +276,7 @@ CFrame.new(Vector3.new(math.sin(a), 0, math.cos(a)) * 122) * CFrame.Angles(0, a,
 - 通用特效 `OrbitShared.ShowFX`：`sparks` 火花、`chunks` 受重力弹跳的火星（真物理小球，只在运行时）、`flash` 闪光、`ring` 地面冲击环（CylinderHandleAdornment）、`puff` 烟 / 尘、`shake` 镜头震动（Humanoid.CameraOffset，按距离衰减）。生成物放在 `Workspace._ShowFX`（不存档）或 Terrain 上的附件，自动清理。
 - 验收：`StarterPlayerScripts.P1Demo`（本地文件 `studio/client/P1Demo.client.lua`）在 Workspace 属性 `P1Demo` = true 时，在家园 0 循环播放（四种组合轮流），**验收完删脚本和属性**。
 
-**第 12 项 组装演出（✅ 11-25 做完，待验收）** `OrbitShared.AssemblyShow`
+**第 12 项 组装演出（✅ 11-25 做完，11-26 已验收）** `OrbitShared.AssemblyShow`
 - 时间轴：0–1.35 龙门吊从发动机坞吊起发动机（坞里的小部件闪青光消失，吊起的部件从 0.3 倍放大成形），落到转台 → 撞击火花 + 弹跳火星 + 橙闪 + 地面冲击环 + 镜头轻震；1.4–2.1 两台机械臂摆动，4 片尾翼依次从外 4.4 格滑入；1.35–2.75 吊燃料舱（最重）；2.75–3.9 吊鼻锥；3.95–4.85 全接缝蓝白点焊 + 焊枪火花，转台带火箭转一圈，龙门吊让到部件坞一侧；4.85 状态灯转绿；4.85–5.2 舱门打开；5.2–5.6 火箭移到门口；5.6–8.4 运输带（箭头和滚筒滚动）送上发射台，替换台上旧火箭（落位金色尘 + 冲击环）；6.0–6.4 关门。收尾：坞清空、状态「待组装 0 / 4」、全息复位。
 - 龙门吊真的会动：整根横梁沿 X 走、小车沿 Z 走、缆绳随抓爪伸缩（抓爪底面最高 17.15，三档最高的火箭也吊得进）。
 - **舱门加宽**（05 已改并重建 6 家）：三档火箭带尾翼和侧挂舱约 8.2 宽，原来 5.2 的门出不去，改成 10 × 14 的伸缩门，四扇 2.45 宽玻璃门（黄色边条），打开时两两叠到两侧玻璃外面；两侧玻璃改为 3 宽。门扇带 `OpenOffset` 属性（全开时的舱本地位移），AssemblyShow 按它滑动。
@@ -294,7 +294,7 @@ CFrame.new(Vector3.new(math.sin(a), 0, math.cos(a)) * 122) * CFrame.Angles(0, a,
 - **去掉底座黄色虚线（用户要求）**：Roll 部件台台座底部黄色虚线（PartPad 的 Dash 环）、发射台台座侧面黄色警示块（04 的 Hazard 环）、组装舱底座四周黄色斜纹（05 的 Hazard）全部删掉；发射台台面上的橙色虚线（可互动提示）和舱内转台虚线保留。04 / 05 / 06 / 09 已重建。
 - 检查：编辑模式逐帧截图（t = 1.0 / 1.62 / 3.6 / 5.45 / 7.0）；Play 模式跑了两轮以上，状态灯 青 → 黄闪 → 绿 → 青，火箭从舱内 (34, 116) 一路到发射台 (0, 96)，控制台无报错。Play 模式下截图工具拍不到客户端镜头，动态效果请用户在 Play 里看。
 
-**第 13 项 Roll 揭晓（✅ 11-25 做完，待验收）** `OrbitShared.RollReveal`（本地 `studio/shared/RollReveal.lua`）
+**第 13 项 Roll 揭晓（✅ 11-25 做完，11-26 已验收）** `OrbitShared.RollReveal`（本地 `studio/shared/RollReveal.lua`）
 - 时间轴约 2.2 s 揭晓 + 光柱余韵（整段 3.95 s）：0–0.3 绿色按钮按下回弹 + 绿色冲击环；4 颗青色能量光球（拖尾 + 星火）从按钮沿弧线飞向 4 座台，落到哪座台哪座就进「开箱中」（PartPad rolling：环灯青色快闪、「? ? ?」卡）+ 台面青色星火盘旋上升；1.35 s 起按稀有度从低到高依次揭晓（间隔 0.2 s）：部件弹出（0.2 → 1.12 → 1 倍）、价格卡弹出、稀有度色爆闪 + 冲击环、同色光柱升起（两层 Beam：外层柔光 + 亮芯；基础 12 白 / 高级 24 蓝 / 精英 48 金），停 0.5 s 后淡出；精英另有金色火花雨、弹跳火星、大范围闪光、镜头轻震，淡出后留下 PartPad 自带的常驻金色光柱。
 - 买下 `RR.buy(pad, target)`：悬浮部件 0.18 s 缩成稀有度色光球（拖尾 + 星火），0.7 s 弧线飞进玩家（终点每帧跟着玩家），落到身上爆火花 + 闪光 + 脚下冲击环；台子转「已售出」。
 - 接口：`RR.play(rollArea, { nose, tank, engine, fins = tier }, { homeColor })`；`RR.prepare` + `show:runTo(t)` 可在编辑模式逐帧检查。
@@ -302,7 +302,7 @@ CFrame.new(Vector3.new(math.sin(a), 0, math.cos(a)) * 122) * CFrame.Angles(0, a,
 - P1Demo 现在轮流播放：Roll 揭晓（随机 55 / 35 / 10）→ 买下最好的一件飞进玩家 → 组装演出。
 - 检查：编辑模式截图 t = 0.4（光球飞行）/ 1.5（开箱中 + 基础揭晓）/ 2.3（精英金柱最高）；Play 模式跑了多轮，状态正确，买下的光球最后离玩家 0.53，控制台无报错。
 
-**第 14 项 点火与发射（✅ 11-25 做完，待验收）** `OrbitShared.LaunchShow`（本地 `studio/shared/LaunchShow.lua`）
+**第 14 项 点火与发射（✅ 11-25 做完，11-26 已验收）** `OrbitShared.LaunchShow`（本地 `studio/shared/LaunchShow.lua`）
 - `LS.prepare(launchArea)` → show。台面（导流孔顶）放一个锚点：暖光 PointLight + 一圈 10 个贴地烟雾喷口（半径 2.2，朝外略向上）。
 - 按住点火 `show:charge(v, stage)`（每帧，v = 这一圈进度，stage 0 点火 / 1 超载 / 2 彩虹区；Web Demo 一圈 2.3 s）：台下暖光随强度闪动（0.5 → 3.3）、尾焰功率 0.25 → 0.8 随 v 变大；超载起火箭抖动、台底冒白色蒸汽、镜头微震；彩虹区尾焰变彩虹、暖光变彩虹色。
 - 发射 `show:launch(judge)`：
@@ -323,7 +323,7 @@ CFrame.new(Vector3.new(math.sin(a), 0, math.cos(a)) * 122) * CFrame.Angles(0, a,
   - 发射里的用法：点火阶段 0.25 → 0.6 随强度变强、超载 0.65、彩虹区 0.8；熄火前抖动 0.7；发射冲击 0.8（超级 1.4、熄火 0.4）；升空余震 0.55（超级 0.75）随高度减弱。组装落位、Roll 精英揭晓、支架合拢也用同一套，自动变得更明显。
   - Play 实测（角色站在台边不动，相机每帧相对头部的变化）：蓄力平均 0.13°/帧、发射 0.22°/帧、升空 0.27°/帧，原来蓄力只有 0.03°/帧。
 
-**第 15 项 飞行表现（✅ 11-25 做完，待验收）** `OrbitShared.FlightShow`（本地 `studio/shared/FlightShow.lua`）
+**第 15 项 飞行表现（✅ 11-25 做完，11-26 已验收）** `OrbitShared.FlightShow`（本地 `studio/shared/FlightShow.lua`）
 - 航线沿用 Web Demo buildPath（× 1.3，Orbits 模块）：爬升（接着 LaunchShow 的升空；邻居用 `fromPad` 从台面起飞）→ 进月球门 → 绕月 N 圈 →（可选：转场木星）→ 返航 → 台上空悬停 → 降落。机头沿速度方向，返航后半段慢慢转回竖直；速度默认 1.2 倍（月球一圈 5 s）。
 - 尾焰外发光：喷口一颗半透明 Neon 光球 + 点光源（尾焰色）。尾迹：尾焰色拖尾（1.4 s）+ 白色航迹云（3 s，越往后越散）。过门：门上一圈金色闪光环 + 火花。
 - 轨道狂热：开始时三层彩虹冲击环 + 彩虹火花 + 粉色闪光；尾焰变彩虹（RocketKit 彩虹尾焰）、尾焰拖尾换成更长更宽的彩虹拖尾、火箭周围彩虹星火、喷口光球变彩虹；**轨道虚线变成沿轨道流动的彩虹**（RainbowFX + 按角度的 RainbowOffset）、**轨道门切到 fever**（放大 1.6 倍、彩虹）；离开轨道时全部恢复。
@@ -335,13 +335,13 @@ CFrame.new(Vector3.new(math.sin(a), 0, math.cos(a)) * 122) * CFrame.Angles(0, a,
 - **11-25 点火等待太长（用户反馈）**：原因是演示按 Web Demo 一圈 2.3 s 模拟蓄力，超级发射要撑两圈多（6.6 s）、超载熄火三圈（6.9 s + 抖 0.7 s），与火箭档次无关。改成：点火段 1.6 s、超载段 0.9 s、彩虹段 0.9 s → 完美 1.4 s、超级 3.3 s、超载 3.4 s + 抖 0.5 s 起飞（熄火断续缩到 0.38 s）。Play 实测完美一轮点火到离台 1.5 s。
   **建议同步到设计方案和 Web Demo**：正式玩法里蓄力表也用 1.6 / 0.9 / 0.9 三段（原 2.3 × 3），否则玩家冲超级发射要按住 6 秒多。待用户确认后再改设计方案和 Web Demo。
 
-**第 16 项 完美接住 / 连续接住（✅ 11-25 做完，待验收）** `OrbitShared.CatchShow`（本地 `studio/shared/CatchShow.lua`）
+**第 16 项 完美接住 / 连续接住（✅ 11-25 做完，11-26 已验收）** `OrbitShared.CatchShow`（本地 `studio/shared/CatchShow.lua`）
 - 由 FlightShow 降落段驱动：`FS.prepare(..., { landing = "perfect" | "great" | "early" | "crash", streak = n })`。
 - 降落中：接住区光柱（CatchZone，绿区高度随支架等级）显示，火箭底环随区段 白 → 黄 → 绿；离台面 14 格以内扬起尘土，越低越密。
 - 「接住」时刻（演示按结果模拟：完美落地前 0.22 s、良好 0.55 s、太早 1.35 s）：支架 0.12 s 合拢 + 夹口小火花；合拢角 `CatchShow.fitClose` 按火箭实际宽度找（巨型燃料舱侧挂舱 → 0.2，不再夹进去）。
 - 落地：完美 = 火箭放大 6% 回弹（定格感）+ 两个夹口大火花 + 弹跳火星 + 金 / 白双层冲击波 + 70 片彩色纸屑（`ShowFX.confetti`）+ 金光 + 震动；连续第 3 次起夹口火花加倍；第 5 次起两只支架之间 1.6 s 青白电弧（折线 Neon 段每 0.05 s 抖动 + 点光源 + 电火花）。良好 = 蓝色冲击波 + 少量火花。太早 = 支架空合一下弹回半开，火箭落台弹一下再夹紧 + 扬尘。没接住 = 支架保持张开，交给第 17 项。
 
-**第 17 项 华丽坠毁 + 维修无人机（✅ 11-25 做完，待验收）** `OrbitShared.CrashShow`（本地 `studio/shared/CrashShow.lua`）
+**第 17 项 华丽坠毁 + 维修无人机（✅ 11-25 做完，11-26 已验收）** `OrbitShared.CrashShow`（本地 `studio/shared/CrashShow.lua`）
 - 0–0.6 s 火箭绕底面边缘倾倒 → 卡通爆炸：橙色火球膨胀淡出、白热闪光、火花、弹跳火星、黑烟 + 橙烟、橙色冲击环、强震；火箭拆成发动机 / 燃料舱 / 鼻锥 / 四片尾翼，各自带速度和自转飞出，在台面 / 地面弹跳冒烟（手动积分，不进物理）。
 - 2.2 s 维修无人机从组装舱上空飞来悬停；2.9–4.5 s 青色修复光锥（ConeHandleAdornment）照住发射台，无人机焊接臂迸焊花，部件间隔 0.12 s 沿弧线飞回原位、卡上冒火花；全部归位青色爆闪；4.6–5.2 s 无人机升空飞走；最后支架合拢（按火箭宽度）。
 - **维修无人机造型**（原画 E1 未画，按组装舱龙门吊的造型语言设计）：深蓝机身 + 白色顶壳 + 橙色饰条 + 绿色状态灯，四个机臂 + 电机 + 半透明旋翼盘（客户端 SpinFX 转），机腹青色「眼睛」+ 点光源，机腹一支白色焊接臂 + 青白焊枪尖；约 6 × 1.6 × 6。`CrashShow.buildDrone(cf, parent)`。**原画 E1 待补。**
@@ -350,7 +350,7 @@ CFrame.new(Vector3.new(math.sin(a), 0, math.cos(a)) * 122) * CFrame.Angles(0, a,
 - 检查：编辑模式截图（爆炸后部件四散、修好后火箭直立支架合拢、无人机造型）；Play 模式完美一轮（光柱黄 → 绿、落地前合拢、70 片纸屑、电弧 10 段）、坠毁一轮（火球、燃料舱飞出 30 格、无人机 + 光锥、部件飞回、支架合拢、火箭回原位），控制台无报错。
 - **11-25 维修无人机验收台（用户要求）**：`world/11_drone_review.lua`（Studio `ServerStorage.WorldBuild.B11_drone_review`）建 `OrbitWorld._DroneReview`，在付费支架验收台南边（甲板 x 194–234，z 236–254，步道接付费支架验收台），109 件。左（+X）：放大 2.5 倍悬在基座上方、Play 时缓慢自转（旋翼也转）；右：原尺寸悬停在一档火箭上方，打开青色修复光锥，看比例。验收后整块删除。
 
-**第 18 项 木星解锁演出（✅ 11-26 做完，待验收）** `OrbitShared.JupiterReveal`（本地 `studio/shared/JupiterReveal.lua`）
+**第 18 项 木星解锁演出（✅ 11-26 做完，11-26 已验收）** `OrbitShared.JupiterReveal`（本地 `studio/shared/JupiterReveal.lua`）
 - 客户端本地（解锁是每个玩家自己的进度）。`J.play({ camera = true })` 跑完整段约 4.6 s（阻塞）；`J.setUnlocked(0 | 1)` 读档时直接设状态；`J.reset()` 恢复锁定（演示用）。
 - 时间轴（Web Demo startReveal / updateReveal）：0–1.8 护盾外发光呼吸闪烁越来越快 → 1.8 护盾发白、朝镜头一侧的球面爬出一圈白色 Neon 裂纹（9 条折线 × 5 段）、淡紫闪屏、轻震 → 1.8–2.35 护盾 ±2% 抖动 → 2.35 碎裂：护盾和外发光消失，球面 4 色（淡紫 / 金 / 白 / 橙）共 300 颗光点向外喷，金 / 紫两层冲击环朝镜头展开，暖白闪屏 + 震动，锁定牌隐藏，轨道门 locked → normal → 2.35–3.8 木星从暗色恢复全彩（饱和 × 1.35、亮度 × 1.4，大红斑饱和 × 1.6），三层行星环（内侧在轨道内，倾斜，色 E8C79A / C98D5B / F3E2C6）从 0.5 倍展开到原大并淡入，轨道虚线变成和月球一样的白色。
 - `camera = true` 时镜头 1.2 s 平滑移到能看全木星和行星环的位置，结束前 0.6 s 平滑还给玩家。
@@ -359,7 +359,7 @@ CFrame.new(Vector3.new(math.sin(a), 0, math.cos(a)) * 122) * CFrame.Angles(0, a,
 - P1Demo 每轮开头先播一次（下一轮开头恢复锁定再播）。
 - 检查：Edit 截图解锁态（全彩 + 三层环 + 白色虚线 + 门 normal）；Play 实测时序：0.4 s 起闪烁、1.4 s 出 45 段裂纹、1.8 s 碎裂（护盾隐藏、光点、门 normal）、1.8–3.2 s 颜色和行星环展开（环半径 58 → 117）、4.0 s 镜头还原，锁定牌隐藏，控制台无报错。
 
-**第 19 项 围观访客 ×3（✅ 11-26 做完，待验收）** `world/13_visitors.lua`（Studio `B13_visitors`）+ `OrbitShared.VisitorShow` + `StarterPlayerScripts.Visitors`
+**第 19 项 围观访客 ×3（✅ 11-26 做完，11-26 已验收）** `world/13_visitors.lua`（Studio `B13_visitors`）+ `OrbitShared.VisitorShow` + `StarterPlayerScripts.Visitors`
 - 每家 `Home_K.Visitors` 3 人（6 家共 18 人、342 件），Web Demo 同款配色，站在发射台周围面朝台：Visitor_Leo (−3, −38) 黄帽蓝衣黑裤、Visitor_Mia (12, −32) 粉帽绿衣蓝裤、Visitor_Sam (−17, −14) 白帽紫衣藏青裤（家园本地坐标）。标准 R15 体型（和玩家一样大，高 5.5），帽子 = 帽顶球 + 深色帽箍 + 前檐，焊在头上；名字牌用 Humanoid 显示名（60 格内）。全部不碰撞、不触发；模型 `ModelStreamingMode = Atomic`。
 - **R15 生成注意**：`Players:CreateHumanoidModelFromDescription` 现在生成的关节是 AnimationConstraint（物理约束，服务器模拟）+ 布娃娃球窝，客户端本地改 Transform 看不到。建造脚本把它们换成同名 Motor6D（C0 / C1 取两头的 RigAttachment），删掉 Animator（否则会清掉 Transform）、脚本和约束；只有 HumanoidRootPart 锚定。属性 HomeCF（脚底站位）、GroundOffset（根部离脚底 3.01）、Home；标签 Visitor。
 - 动作 `VisitorShow`（客户端，Web Demo updateSpectators / updateRagdoll，距离和速度 × 1.3）：
@@ -373,11 +373,11 @@ CFrame.new(Vector3.new(math.sin(a), 0, math.cos(a)) * 122) * CFrame.Angles(0, a,
 - 检查：Edit 截图站位和造型；Play 超级发射力度实测：Leo 飞出 28 格（落在桥面）、Mia 20 格（岛边弹回）、Sam 18 格，约 7 s 后全部走回原位；P1Demo 完整一轮：完美发射欢呼 → 超级发射掀翻 → 回位欢呼 → 坠毁再掀翻 → 回位欢呼，控制台无报错。
 - 设计里写「布娃娃用引擎物理」：没用。根部锚定 + 程序化翻滚（和 Web Demo 一样）在客户端完全可控、不会卡进地形，也不用服务器参与；需要真物理时再议。
 
-**第 20 项 广场内容（✅ 11-26 做完，待验收）** `world/12_plaza.lua`（Studio `B12_plaza`）→ `OrbitWorld.PlazaContent`（239 件）
+**第 20 项 广场内容（✅ 11-26 做完，11-26 已验收）** `world/12_plaza.lua`（Studio `B12_plaza`）→ `OrbitWorld.PlazaContent`（239 件）
 - 火箭雕塑：中央圆台（台面 y 1.45）上立石墨色底座（Ø10 + 金色饰环 + Ø8.4 顶板），上面一枚 RocketKit 火箭（气动鼻锥 + 巨型燃料舱 + 等离子发动机 + 基础尾翼，Web Demo 同款），放大 1.6 倍，金色主色，客户端 SpinFX 0.15 缓慢自转；四周 6 盏青色地灯（SpotLight 朝上照雕塑）。
 - 公共商店位 ×3：在 30° / 150° / 270°（两座桥之间的空档，P0 定），半径 40、正面朝广场中心，光柱在店后。造型和家园店位同一套（白色小屋 + 卷帘门 + 黄框）放大一号，加条纹遮阳棚、柜台和「即将开放 · 公共商店」招牌，三家点缀色 金 / 青 / 粉。商店内容待商业化设计决定。
 
-**第 21 项 全局氛围 · 流星（✅ 11-26 做完，待验收）** `StarterPlayerScripts.Meteors`（本地 `studio/client/Meteors.client.lua`）
+**第 21 项 全局氛围 · 流星（✅ 11-26 做完，11-26 已验收）** `StarterPlayerScripts.Meteors`（本地 `studio/client/Meteors.client.lua`）
 - 客户端每 2–6.5 s 在远空随机生成一颗流星：Neon 发光头（8 格，远在 1200–1500 格外要够大）+ 拖尾（约 180 格），1.2 s 划过，亮度先亮后暗；数值沿用 Web Demo（出生在半径 900、高 450–1150 的天球上，速度 760，斜向下）× 1.3。放在 `Workspace._Meteors`（不存档），不进物理。
 - 「从邻居家能读懂星球特征」：月球 / 木星（锁定紫盾、解锁全彩 + 行星环）在 P0 已可从各家看到，本项没有另改。
 
