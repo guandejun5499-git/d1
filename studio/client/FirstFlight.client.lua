@@ -9,7 +9,13 @@ local net=require(sh.logic.Network).event(false)
 local AB,AS=require(sh.AssemblyBay),require(sh.AssemblyShow)
 local LS,FS=require(sh.LaunchShow),require(sh.FlightShow)
 local SD,O,G=require(sh.Stardust),require(sh.Orbits),require(sh.OrbitGate)
-local color=require(sh.BuildLib).homeColor(0)
+local index=player:GetAttribute("FlightHome")
+while index==nil do player:GetAttributeChangedSignal("FlightHome"):Wait() index=player:GetAttribute("FlightHome") end
+local B=require(sh.BuildLib)
+local color=B.homeColor(index)
+local frame=B.homeFrame(index)
+local Style=require(sh.UIStyle)
+local Sound=require(sh.SoundBank)
 local crash=require(sh.CrashShow)
 local gui=Instance.new("ScreenGui")
 gui.Name="FirstFlightHUD"
@@ -28,16 +34,16 @@ local function widget(class,name,pos,size)
 	v.TextScaled=true
 	v.TextWrapped=true
 	v.Parent=gui
-	Instance.new("UICorner",v).CornerRadius=UDim.new(0,10)
+	Style.apply(v)
 	local limit=Instance.new("UITextSizeConstraint",v)
 	limit.MaxTextSize=22
 	return v
 end
-local info=widget("TextLabel","Status",UDim2.fromScale(.5,.13),UDim2.fromScale(.72,.09))
+local info=widget("TextLabel","Status",UDim2.fromScale(.5,.22),UDim2.fromScale(.88,.065))
 info.Text="正在载入首飞…"
 local balance=widget("TextLabel","Coins",UDim2.fromScale(.13,.045),UDim2.fromScale(.23,.06))
 local button=widget("TextButton","Action",UDim2.fromScale(.5,.86),UDim2.fromScale(.46,.09))
-button.BackgroundColor3=Color3.fromRGB(188,78,14)
+button.BackgroundColor3=Style.accent
 button.Visible=false
 local cancel=widget("TextButton","ReturnToHome",UDim2.fromScale(.5,.95),UDim2.fromScale(.26,.055))
 cancel.Text="返回家园"
@@ -59,14 +65,30 @@ local function strip(start,width,color3)
 end
 local zone=strip(.78,.14,Color3.fromRGB(57,217,128))
 local needle=strip(0,.012,Color3.new(1,1,1))
-local receipt=widget("TextLabel","Receipt",UDim2.fromScale(.5,.48),UDim2.fromScale(.70,.32))
+local receipt=widget("TextLabel","Receipt",UDim2.fromScale(.5,.48),UDim2.fromScale(.82,.40))
 receipt.Visible=false
 local world=workspace:WaitForChild("OrbitWorld")
-local home=world:WaitForChild("Homes"):WaitForChild("Home_0")
+local home=world:WaitForChild("Homes"):WaitForChild("Home_"..index)
 local area=home:WaitForChild("LaunchArea")
 local bay=home:WaitForChild("AssemblyBay")
 local pad=area:WaitForChild("LaunchPad"):WaitForChild("FlameHole")
+task.spawn(require(script.Parent.HarborView).start,world.Homes,index,gui)
 local camera=workspace.CurrentCamera
+local pop=widget("TextLabel","FlightCallout",UDim2.fromScale(.5,.34),UDim2.fromScale(.55,.09))
+pop.Visible=false
+local serial=0
+local function callout(title)
+	serial+=1 local token=serial
+	pop.Text=title pop.Visible=true
+	task.delay(1,function() if token==serial then pop.Visible=false end end)
+end
+local border=Instance.new("Frame",gui)
+border.Size=UDim2.new(1,-6,1,-6) border.Position=UDim2.fromOffset(3,3) border.BackgroundTransparency=1
+local rim=Instance.new("UIStroke",border)
+rim.Thickness=4 rim.Color=Color3.fromRGB(255,142,226) border.Visible=false
+local beats={}
+local chargeAudio
+local receiptId=0
 local function prompt(part,title)
 	local p=Instance.new("ProximityPrompt")
 	p.ActionText=title
@@ -91,7 +113,7 @@ end
 local function tell(text) info.Text=text end
 tell("前往右侧组装舱，按 E 检查四件基础部件")
 local work=require(script.Parent:WaitForChild("WorkshopView")).new({
-	gui=gui,home=home,bay=bay,area=area,pad=pad,color=color,coins=coins,
+	gui=gui,home=home,bay=bay,area=area,pad=pad,color=color,frame=frame,coins=coins,
 	flights=player.leaderstats.Flights,assemblePrompt=assemblePrompt,padPrompt=padPrompt,
 	prompt=prompt,tell=tell,idle=function() return phase=="bay" or phase=="pad" or phase=="confirm" end,
 	send=function(revision,op,slot,tier) net:FireServer("work",workspace:GetServerTimeNow(),revision,op,slot,tier) end,
@@ -149,19 +171,32 @@ local function finish()
 		work:controls()
 		return
 	end
-	local rows,dust,bonus,total,result,firstJupiter,saved=table.unpack(received,1,7)
+	local rows,dust,bonus,total,result,firstJupiter=table.unpack(received,1,6)
+	local saved=received[8]~=false
 	local labels={perfect="完美接住",great="良好接住",early="提前接住",crash="残骸回收"}
-	local lines={saved==false and "保存失败 · 本趟收益未入账，即将断开重连" or firstJupiter and "首次木星飞行！" or "飞行回收"}
-	for i,r in rows do table.insert(lines,("第 %d 圈  %s   +%d"):format(i,r.grade,r.coins)) end
+	local lines={not saved and "保存失败 · 本趟收益未入账，即将断开重连" or firstJupiter and "首次木星飞行！" or received[7] and "新的最佳飞行！" or "飞行回收"}
+	for i,r in rows do
+		table.insert(lines,("%s %d  ·  %s  +%d\n连圈 ×%g   点火 ×%g   门 ×%g   星尘 ×%g%s"):format(
+			r.body=="jupiter" and "木星" or "月球",i,r.grade,r.coins,r.chain,r.ignition,r.gate,r.shards,r.fever and "   狂热 ×2" or ""))
+	end
 	table.insert(lines,("星尘 +%d    %s +%d\n合计  +%d 金币"):format(dust,labels[result],bonus,total))
 	if result=="perfect" and streak>=1 then
 		table.insert(lines,("连续完美 %d 次 · 连击奖励 ×%g"):format(streak+1,1+.25*math.min(streak,4)))
 	elseif streak>0 then
 		table.insert(lines,("连续完美中断 · 上次 %d 次"):format(streak))
 	end
-	receipt.Text=table.concat(lines,"\n")
+	receiptId+=1 local ticket=receiptId
+	receipt.Text=lines[1]
+	task.spawn(function()
+		for i=2,#lines do
+			if not Style.reduced() then task.wait(.10) end
+			if ticket~=receiptId then return end
+			receipt.Text=table.concat(lines,"\n",1,i)
+			Sound.play("row",nil,1+.05*i)
+		end
+	end)
 	receipt.Visible=true
-	tell(saved==false and "存档连接中断 · 本趟收益未保存，即将断开，请重新加入" or ("奖励已到账 · %s"):format(work:hint()))
+	tell(not saved and "存档连接中断 · 本趟收益未保存，即将断开，请重新加入" or ("奖励已到账 · %s"):format(work:hint()))
 	action("领取")
 	phase="receipt"
 end
@@ -195,6 +230,7 @@ local function down(input,pos)
 		holding=input
 		chargeStart=now()
 		launch=LS.prepare(area)
+		chargeAudio=Sound.play("charge",pad,1,true)
 		fire("charge")
 		bar.Visible=true
 		padPrompt.Enabled=false
@@ -215,6 +251,13 @@ local function down(input,pos)
 			fire("boost",lapIndex)
 		end
 	elseif phase=="receipt" then
+		receiptId+=1 Sound.chord("claim")
+		if not Style.reduced() then
+			local token=widget("TextLabel","CoinAward",UDim2.fromScale(.5,.48),UDim2.fromOffset(85,32))
+			token.Text="+"..received[4]
+			game:GetService("TweenService"):Create(token,TweenInfo.new(.45),{Position=balance.Position,BackgroundTransparency=1}):Play()
+			game:GetService("Debris"):AddItem(token,.46)
+		end
 		receipt.Visible=false
 		phase="pad"
 		action(nil)
@@ -234,16 +277,14 @@ local function release()
 	if phase=="charge" and holding then holding=nil fire("release") end
 end
 Input.InputEnded:Connect(function(i) if i==holding or (holding and i.UserInputType==Enum.UserInputType.MouseButton1) then release() end end)
-net.OnClientEvent:Connect(function(kind,a,b,c,d,e,f,g)
-	if kind=="full" then
-		-- First-flight slice runs one player on Home_0; keep syncing so this client takes over when it frees up
-		if not work.data then tell("首飞测试版同一时间只支持 1 名玩家 · 正在等待空位（也可换一个服务器加入）") end
-	elseif kind=="workshop" then
+net.OnClientEvent:Connect(function(kind,a,b,c,d,e,f,g,h)
+	if kind=="workshop" then
 		if b=="init" then phase=a.pad and "pad" or "bay" end
 		work:update(a,b,c,d,e,f)
 	elseif kind=="retry" then
 		if a=="charge" and phase=="charge" then
 			holding=nil
+			if chargeAudio then chargeAudio:Destroy() chargeAudio=nil end
 			bar.Visible=false
 			launch:reset()
 			launch:destroy()
@@ -264,6 +305,8 @@ net.OnClientEvent:Connect(function(kind,a,b,c,d,e,f,g)
 		assemblePrompt.Enabled=false
 		tell("组装中 · 等待火箭运上发射台")
 		work:controls()
+		Sound.play("assemble",bay.Turntable)
+		for _,delay in {1.3,2.5,4.1} do task.delay(delay,Sound.play,"weld",bay.Turntable) end
 		AS.play(bay,a,color)
 		phase="pad"
 		padPrompt.Enabled=true
@@ -275,15 +318,26 @@ net.OnClientEvent:Connect(function(kind,a,b,c,d,e,f,g)
 		bar.Visible=false
 		phase="launch"
 		landing,lapIndex,received,visualDone=nil,nil,nil,false
+		if chargeAudio then chargeAudio:Destroy() chargeAudio=nil end
+		Sound.play(b=="super" and "super" or "launch",pad)
+		table.clear(beats)
+		launch=launch or LS.prepare(area)
+		camera.CameraType=Enum.CameraType.Scriptable
 		launch:startLaunch(b)
 		tell("点火  "..string.upper(b))
 		action(nil)
 	elseif kind=="gate" then
 		clock=e
-		if flight and flight.fever~=d then flight:setFever(d,f) end
+		local changed=flight and flight.fever~=d
+		if changed then flight:setFever(d,f) Sound.fever(d) end
+		border.Visible=d
+		callout(changed and d and "ORBIT FEVER!" or ("%s   +%d"):format(a,b))
+		if a=="PERFECT" then Sound.play("perfect",nil,1+.06*c) end
 		tell(("%s   +%d   %s"):format(a,b,d and "ORBIT FEVER!" or ("FEVER "..c.."/2")))
 	elseif kind=="caught" then
 		landing=a
+		Sound.play("lock",pad)
+		if a=="perfect" then Sound.chord("perfect") elseif streak>0 then Sound.play("streakEnd") end
 		clock=c
 		if flight then
 			flight.catchShow.result=a
@@ -293,9 +347,10 @@ net.OnClientEvent:Connect(function(kind,a,b,c,d,e,f,g)
 		action(nil)
 		tell("回收支架已启动")
 	elseif kind=="shard" then
+		Sound.play("shard",nil,1+.1*b)
 		if a==lapIndex and shards[b] then SD.collect(shards[b]) local g=showGate(plan.laps[a].body) if g then G.setState(g,"boost") end end
 	elseif kind=="receipt" then
-		received={a,b,c,d,e,f,g}
+		received={a,b,c,d,e,f,g,h}
 		finish()
 	end
 end)
@@ -310,12 +365,14 @@ Run.RenderStepped:Connect(function()
 		local t=now()-chargeStart
 		local v,stage=Rules.gauge(t)
 		launch:charge(v,stage)
+		if chargeAudio then chargeAudio.PlaybackSpeed=.7+.45*(stage+v) end
+		zone.BackgroundColor3=stage==2 and Color3.fromHSV(v,.8,1) or Color3.fromRGB(57,217,128)
 		needle.Position=UDim2.fromScale(v,0)
 		zone.Position=UDim2.fromScale(stage==2 and .82 or .78,0)
 		zone.Size=UDim2.fromScale(stage==1 and 0 or stage==2 and .06 or .14,1)
 		button.Text=({"绿区松手","继续按住…","彩虹区松手 +60%"})[stage+1]
 		camera.CameraType=Enum.CameraType.Scriptable
-		camera.CFrame=CFrame.lookAt(pad.Position+Vector3.new(-28,9,24),pad.Position+Vector3.yAxis*9)
+		camera.CFrame=CFrame.lookAt(pad.Position+frame:VectorToWorldSpace(Vector3.new(-28,9,24)),pad.Position+Vector3.yAxis*9)
 		if t>=3.4 then release() end
 	elseif phase=="launch" or phase=="flight" then
 		local t=Rules.position(clock,now())
@@ -336,6 +393,9 @@ Run.RenderStepped:Connect(function()
 				if lapIndex~=i then startLap(i) end
 				local g=showGate(lap.body)
 				local left=lap.gate-t
+				local beat=if left<=0 then 3 elseif left<=.3 then 2 elseif left<=.6 then 1 else 0
+				if beat>(beats[i] or 0) then beats[i]=beat Sound.play(beat==3 and "beat" or "count",nil,1+.04*i+.08*beat) end
+				if border.Visible and not Style.reduced() then rim.Color=Color3.fromHSV((t*.5)%1,.65,1) end
 				if g then G.setShrink(g,1+math.min(2,math.abs(left))) G.setActive(g,math.abs(left)<=plan.window+(flight.fever and .05 or 0)) end
 				local body=O.bodies[lap.body]
 				local u=math.clamp((t-lap.start)/(lap.gate-lap.start),0,1)
@@ -348,7 +408,7 @@ Run.RenderStepped:Connect(function()
 		local last=plan.laps[#plan.laps]
 		local between=plan.legs[2] and t>plan.laps[1].gate+.54 and t<plan.laps[2].start
 		if t<plan.laps[1].start or t>last.gate+.54 or between then
-			camera.CFrame=CFrame.lookAt(pos+Vector3.new(-30,12,27),pos+Vector3.yAxis*5)
+			camera.CFrame=CFrame.lookAt(pos+frame:VectorToWorldSpace(Vector3.new(-30,12,27)),pos+Vector3.yAxis*5)
 			if lapIndex then
 				local g=showGate(plan.laps[lapIndex].body)
 				if g then G.setShrink(g,nil) G.setActive(g,false) G.setState(g,"normal") end
@@ -363,15 +423,17 @@ Run.RenderStepped:Connect(function()
 		end
 		if t>=plan.duration then
 			phase="landing"
+			Sound.fever(false) border.Visible=false
 			action(nil)
 			task.spawn(function()
 				-- Allow the server to confirm a last-frame catch before choosing crash FX (bounded wait).
 				local waited=os.clock()
 				while not received and os.clock()-waited<RECEIPT_TIMEOUT do task.wait() end
 				local result=received and received[5] or landing or "crash"
-				if result=="crash" then crash.play(area,flight.rocket) else task.wait(.3) end
+				if result=="crash" then Sound.play("crash",pad) callout("华丽坠毁 · 无人机回收") crash.play(area,flight.rocket) else task.wait(.3) end
 				flight:cleanup()
 				flight=nil
+				launch=nil
 				restore()
 				visualDone=true
 				finish()

@@ -13,9 +13,11 @@ local Catch=require(shared.CatchShow)
 
 local View={}
 View.__index=View
-local navy=Color3.fromRGB(22,33,52)
+local style=require(shared.UIStyle)
+local sound=require(shared.SoundBank)
+local navy=style.panel
 local blue=Color3.fromRGB(39,72,100)
-local accent=Color3.fromRGB(168,72,15)
+local accent=style.accent
 local muted=Color3.fromRGB(57,63,76)
 local guidance={
 	assembly="① 前往组装舱 · 用四件基础部件组装首飞火箭",
@@ -36,7 +38,7 @@ local function box(parent,class,name)
 end
 local function textBox(parent,title,fn,enabled)
 	local obj=box(parent,fn and "TextButton" or "TextLabel",title)
-	obj.Font=Enum.Font.GothamBold
+	style.apply(obj)
 	obj.TextColor3=Color3.fromRGB(247,244,227)
 	obj.TextWrapped=true
 	obj.TextSize=15
@@ -88,6 +90,11 @@ function View.new(ctx)
 	end
 	self.rollPrompt.Triggered:Connect(function() self:command("roll") end)
 	self.upPrompt.Triggered:Connect(function() self:open("upgrade") end)
+	self.progress=textBox(self.gui,"木星航线",nil)
+	self.progress.Position=UDim2.fromScale(.015,.16)
+	self.progress.Size=UDim2.new(.24,0,0,26)
+	self.progress.AutomaticSize=Enum.AutomaticSize.None
+	self.progress.TextScaled=true
 	self.bagButton=textBox(self.gui,"背包",function() self:open("bag") end)
 	self.bagButton.AutomaticSize=Enum.AutomaticSize.None
 	self.bagButton.Position=UDim2.fromScale(.015,.09)
@@ -135,6 +142,7 @@ function View:controls()
 	local idle=w and self.idle() and not self.busy and not self.mode and not self.animating
 	local free=idle and self.flights.Value>0
 	self.bagButton.Visible=free==true
+	self.progress.Visible=free==true
 	self.assemblePrompt.ActionText=w and w.pad and "打开组装舱" or "组装基础火箭"
 	local nearest,best=nil,math.huge
 	local character=Players.LocalPlayer.Character
@@ -188,7 +196,7 @@ function View:open(mode)
 		local focus=self.bay.Turntable.Position+Vector3.yAxis*7
 		local cam=workspace.CurrentCamera
 		cam.CameraType=Enum.CameraType.Scriptable
-		cam.CFrame=CFrame.lookAt(focus+Vector3.new(-34,11,17),focus+Vector3.new(0,1,4))
+		cam.CFrame=CFrame.lookAt(focus+self.frame:VectorToWorldSpace(Vector3.new(-34,11,17)),focus+self.frame:VectorToWorldSpace(Vector3.new(0,1,4)))
 		self.bayCamera=true
 	end
 	self:render()
@@ -293,6 +301,8 @@ function View:update(w,op,slot,reason,streak,best)
 	local prev=self.data
 	self.data=w
 	self.busy=false
+	local p=Workshop.preview(w.staged) or Rules.performance(w.pad or Rules.basic)
+	self.progress.Text=w.jupiter and "木星  ✓ 已解锁" or ("木星  Δv %d / 900"):format(math.round(p.dv or 0))
 	self.streakText.Text=("连续完美 %d · 最佳 %d"):format(streak,best)
 	if op=="error" then self.tell(reason) self:render() self:controls() return end
 	if op=="init" then
@@ -311,6 +321,7 @@ function View:update(w,op,slot,reason,streak,best)
 	elseif op=="roll" then
 		self.animating=true
 		self:controls()
+		sound.play("roll",self.rollPart)
 		local show=RR.prepare(self.rollArea,w.offers,{homeColor=self.color})
 		local start=os.clock()
 		repeat
@@ -319,12 +330,14 @@ function View:update(w,op,slot,reason,streak,best)
 		until os.clock()-start>=1.2
 		show:runTo(show.duration)
 		show:cleanup()
+		sound.chord("reveal")
 		self:offers()
 		self:staging()
 		self.animating=false
 		self:open("roll")
 		self.tell(w.rolls==1 and "首抽赠送 · 大燃料舱已入包，回组装舱替换基础燃料舱" or "部件已揭晓")
 	elseif op=="buy" then
+		sound.play("buy")
 		self.animating=true
 		self:controls()
 		local i=table.find(Parts.SLOTS,slot)
@@ -344,11 +357,12 @@ function View:update(w,op,slot,reason,streak,best)
 			self:controls()
 			self.tell("木星进入射程！")
 			task.wait(1)
+			sound.chord("unlock")
 			JR.play({camera=true})
 			self.animating=false
 			self:open("unlock")
 		end
-	elseif op=="upgrade" then self.tell(("支架已升级至 L%d"):format(w.level))
+	elseif op=="upgrade" then sound.chord("unlock") self.tell(("支架已升级至 L%d"):format(w.level))
 	end
 	self:render()
 	self:controls()

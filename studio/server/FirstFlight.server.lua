@@ -1,322 +1,122 @@
 local Players=game:GetService("Players")
-local RS=game:GetService("ReplicatedStorage")
 local Http=game:GetService("HttpService")
-local Rules=require(RS.OrbitShared.logic.Rules)
-local net=require(RS.OrbitShared.logic.Network).event(true)
-local Profiles=require(script.Parent.Profiles)
-local Workshop=require(RS.OrbitShared.logic.Workshop)
-local Arms=require(RS.OrbitShared.CatchArms)
-local Build=require(RS.OrbitShared.BuildLib)
-local rollRng=Random.new()
-local plan
-local home=workspace:WaitForChild("OrbitWorld"):WaitForChild("Homes"):WaitForChild("Home_0")
-local pad=home.LaunchArea.LaunchPad.FlameHole
-local bay=home.AssemblyBay.Turntable
-local rollArea=home:WaitForChild("RollArea")
-local rollButton=rollArea.RollButton.Button
-local board=home.LaunchArea.FrameBoard
-local boardButton=board.UpgradeButton
-local padFrame=Build.homeFrame(0)*CFrame.new(0,0,-26)
-local owner,state
+local SH=game.ReplicatedStorage.OrbitShared
+local Build=require(SH.BuildLib)
+local Rules=require(SH.logic.Rules)
+local Arms=require(SH.CatchArms)
+local net=require(SH.logic.Network).event(true)
+local createSession=require(script.Parent.HomeSession)
+local homes=workspace:WaitForChild("OrbitWorld"):WaitForChild("Homes")
+-- Review stands remain available in Edit mode, outside the replicated play scene.
+for _,name in {"_PartsReview","_P0Review","_PaidBrackets","_DroneReview"} do
+	local stand=homes.Parent:FindFirstChild(name)
+	if stand then stand.Parent=game.ServerStorage end
+end
+local assigned,slots={},{} 
 local now=function() return workspace:GetServerTimeNow() end
--- The P1 acceptance loop (StarterPlayerScripts.P1Demo, gated by this attribute) drives the same Home_0
--- pad, rocket, arms and camera. The real loop supersedes it, so switch it off before any client starts.
-workspace:SetAttribute("P1Demo",false)
-local MAX_SETTLE_TRIES=5
-local closing=false
-local function send(kind,...)
-	if owner and owner.Parent then net:FireClient(owner,kind,...) end
-end
-local function near(player,part)
-	local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	return root and (root.Position-part.Position).Magnitude<=26
-end
-local function showArms(level)
-	local old=home.LaunchArea:FindFirstChild("CatchArms")
-	if not old or old:GetAttribute("Level")~=level then
-		if old then old:Destroy() end
-		Arms.build(padFrame,level,home.LaunchArea)
-	end
-	Arms.updateBoard(board,level)
-end
 
-local function snapshot(s,op,slot,reason)
-	send("workshop",s.data.workshop,op,slot,reason,s.data.perfectStreak,s.data.bestStreak)
-end
-
-local function transact(player,s,revision,op,slot,tier)
-	if s.writing or (s.phase~="bay" and s.phase~="pad" and s.phase~="done") then
-		snapshot(s,"error",nil,"当前操作进行中")
-		return
-	end
-	if revision~=s.data.workshop.revision then snapshot(s,"error",nil,"状态已更新，请重试") return end
-	if typeof(op)~="string" or (slot~=nil and typeof(slot)~="string") or (tier~=nil and typeof(tier)~="number") then return end
-	local station
-	if op=="roll" then station=rollButton
-	elseif op=="buy" then
-		local index=table.find(require(RS.OrbitShared.PartPad).SLOTS,slot)
-		if not index then return end
-		station=rollArea["PartPad_"..index].Cap
-		if near(player,rollButton) then station=rollButton end
-	elseif op=="upgrade" then station=boardButton
-	elseif op=="stage" or op=="assemble" then station=bay
-	else return end
-	if not near(player,station) then snapshot(s,"error",nil,"请靠近对应操作台") return end
-	if (op=="roll" or op=="buy") and now()<(s.rollReady or 0) then snapshot(s,"error",nil,"揭晓中") return end
-	-- One result per revision, including across UpdateAsync retries and ambiguous write acknowledgements.
-	local seed=rollRng:NextInteger(1,2147483646)
-	local token=Http:GenerateGUID(false)
-	local reason
-	s.writing=true
-	local ok,data=pcall(Profiles.change,player,function(d)
-		if d.workshop.lastCommand==token then reason=nil return end
-		if d.workshop.revision~=revision then reason="状态已更新" return end
-		reason=Workshop.apply(d,op,slot,tier,Random.new(seed))
-		if not reason then d.workshop.lastCommand=token end
-	end)
-	s.writing=false
-	if not ok or not data then
-		if player.Parent then player:Kick("存档连接中断，请重新加入以恢复已保存的进度") end
-		return
-	end
-	s.data=data
-	if reason then snapshot(s,"error",slot,reason) return end
-	if op=="assemble" then
-		s.phase="assembly"
-		s.ready=now()+8.4
-	elseif op=="roll" then s.rollReady=now()+1.2
-	elseif op=="upgrade" then showArms(data.workshop.level) end
-	player.leaderstats.Coins.Value=data.coins
-	snapshot(s,op,slot)
-	if op=="assemble" then send("assemble",data.workshop.pad) end
-end
-
--- leaderstats are created for every player (the client waits on them); values are filled for the owner
-local function stats(player)
-	local folder=player:FindFirstChild("leaderstats")
-	if not folder then
-		folder=Instance.new("Folder")
-		folder.Name="leaderstats"
-		for _,key in {"Coins","Flights"} do
-			local n=Instance.new("IntValue")
-			n.Name=key
-			n.Parent=folder
-		end
-		folder.Parent=player
-	end
-	return folder
-end
-
-local function join(player)
-	stats(player)
-	-- First-flight slice: one player uses Home_0. Others wait (the client shows a notice and keeps syncing)
-	-- and take over when the owner leaves.
-	if owner then return end
-	owner=player
-	local function spawnAtHome(character)
-		character:WaitForChild("HumanoidRootPart")
-		local pos=home.SpawnMarker.Dot.Position+Vector3.yAxis*4
-		character:PivotTo(CFrame.lookAt(pos,Vector3.new(pad.Position.X,pos.Y,pad.Position.Z)))
-	end
-	player.CharacterAdded:Connect(spawnAtHome)
-	if player.Character then task.spawn(spawnAtHome,player.Character) end
-	local ok,data=pcall(Profiles.open,player)
-	if owner~=player then
-		if ok and data then Profiles.change(player,nil,true) end
-		return
-	end
-	if not ok or not data then player:Kick("无法取得存档，请稍后重试") return end
-	local folder=stats(player)
-	folder.Coins.Value=data.coins
-	folder.Flights.Value=data.flights
-	showArms(data.workshop.level)
-	state={phase=data.workshop.pad and "pad" or "bay",data=data,lastInput=0}
-	player:SetAttribute("FlightHome",0)
-end
-local function launch(s,stamp)
-	plan=Rules.performance(s.data.workshop.pad)
-	plan.catchWindow=Arms.LEVELS[s.data.workshop.level].win
-	plan.catchBonus=Arms.LEVELS[s.data.workshop.level].bonus
-	s.judge,s.factor=Rules.ignition(stamp-s.charge)
-	s.id=Http:GenerateGUID(false)
-	s.clock={wall=now()+.1,t=0,rate=1,slow=plan.duration-plan.catchWindow-.6}
-	s.phase="flight"
-	s.rows,s.shards,s.dust,s.chain,s.fever={}, {},0,0,false
-	s.catch,s.catchFactor,s.lastStamp=nil,nil,0
-	send("launch",s.id,s.judge,plan,s.clock,s.data.perfectStreak)
-end
-local function gate(s,i,judge,factor)
-	local lap=plan.laps[i]
-	local count=0
-	for j=1,2 do if s.shards[i*2+j] then count+=1 end end
-	local coins=math.round(lap.base*plan.coinFactor*(1+.5*(i-1))*s.factor*factor*(1+.25*count)*(s.fever and 2 or 1))
-	s.rows[i]={grade=judge,coins=coins}
-	local chain,fever=Rules.chain(s.chain,judge)
-	s.chain=chain
-	-- Fever only lives inside the orbits: after the last gate the return and landing run at normal speed
-	-- and the client turns the rainbow orbit and trail off (same as the accepted P1 FlightShow).
-	if i==#plan.laps then fever=false end
-	if fever~=s.fever then
-		local wall=now()
-		s.clock={wall=wall,t=Rules.position(s.clock,wall),rate=fever and 1.2 or 1,slow=plan.duration-plan.catchWindow-.6}
-		s.fever=fever
-	end
-	send("gate",judge,coins,s.chain,s.fever,s.clock,lap.body)
-end
-local function settle(s,player)
-	s.phase="saving"
-	s.wasAtJupiter=s.data.workshop.reachedJupiter
-	local result=s.catch or "crash"
-	local streak=if result=="perfect" then s.data.perfectStreak+1 else 0
-	local bonus=math.round(plan.catchBonus*(result=="crash" and .5 or s.catchFactor)*(1+.25*math.clamp(streak-1,0,4)))
-	local total=bonus+s.dust
-	-- Only laps actually flown count (a player who leaves mid-flight is settled with what they earned)
-	local reachedJupiter=false
-	for i,r in s.rows do
-		total+=r.coins
-		if plan.laps[i].body=="jupiter" then reachedJupiter=true end
-	end
-	local ok,data
-	for attempt=1,MAX_SETTLE_TRIES do
-		ok,data=pcall(Profiles.change,player,function(d)
-			if d.lastFlight==s.id then return end
-			d.lastFlight=s.id
-			d.coins+=total
-			d.flights+=1
-			Workshop.landed(d.workshop,reachedJupiter and "jupiter" or "moon")
-			if s.judge=="super" then d.workshop.superSeen=true end
-			d.perfectStreak=streak
-			d.bestStreak=math.max(d.bestStreak,streak)
-			d.bestFlight=math.max(d.bestFlight,total)
-		end)
-		if ok then break end
-		if attempt<MAX_SETTLE_TRIES then task.wait(2) end
-	end
-	local saved=ok and data~=nil
-	if saved then
-		s.data=data
-		if player.Parent then
-			player.leaderstats.Coins.Value=data.coins
-			player.leaderstats.Flights.Value=data.flights
-			snapshot(s,"landed")
-		end
-	end
-	-- Always answer so the client can finish the landing; a failed save is reported, then the player is
-	-- sent back to rejoin (same handling as other lost-session paths).
-	if player.Parent then
-		local firstJupiter=saved and reachedJupiter and not s.wasAtJupiter
-		send("receipt",s.rows,s.dust,bonus,total,result,firstJupiter,saved)
-		if not saved then
-			task.delay(4,function()
-				if player.Parent then player:Kick("存档连接中断，本趟收益未保存，请重新加入") end
-			end)
-		end
-	end
-	s.phase="done"
-end
-local waiting={}
-net.OnServerEvent:Connect(function(player,kind,stamp,id,i,j,tier)
-	if typeof(stamp)~="number" then return end
-	local s=state
-	local wall=now()
-	if player~=owner or not s then
-		-- Not (yet) the Home_0 player: tell them once per few seconds instead of leaving them on "loading"
-		if kind=="sync" and player~=owner and wall-(waiting[player] or 0)>3 then
-			waiting[player]=wall
-			net:FireClient(player,"full")
-		end
-		return
-	end
-	-- Workshop commands and sync are not timing-judged, so a slow connection must not drop them.
-	-- Every request gets an answer (snapshot or error), so the client never stays busy.
-	if kind=="sync" then
-		if wall-(s.lastSync or 0)>.25 then s.lastSync=wall snapshot(s,"init") end
-		return
-	end
-	if kind=="work" then
-		if wall-(s.lastWork or 0)<.06 then snapshot(s,"error",nil,"操作过快") return end
-		s.lastWork=wall
-		transact(player,s,id,i,j,tier)
-		return
-	end
-	-- Timing inputs (charge / release / boost / shard / catch) are judged on their stamp, so it must be recent
-	if not (stamp>=wall-.45 and stamp<=wall+.08) then return end
-	if s.writing then
-		if kind=="charge" then send("retry","charge") end
-		return
-	end
-	if kind=="release" and s.phase=="charge" and stamp>=s.charge then launch(s,stamp) return end
-	if wall-s.lastInput<.035 then return end
-	s.lastInput=wall
-	if kind=="charge" and (s.phase=="pad" or s.phase=="done") and near(player,pad) then
-		s.phase="charge"
-		s.charge=stamp
-		send("charge")
-	elseif kind=="charge" or kind=="assemble" then
-		send("retry",kind)
-	elseif s.phase=="flight" and id==s.id and stamp>=s.lastStamp then
-		local t=Rules.position(s.clock,stamp)
-		s.lastStamp=stamp
-		if kind=="catch" and not s.catch and t>=plan.landStart and t<=plan.duration then
-			local left=plan.duration-t
-			s.catch,s.catchFactor=Rules.catch(left,plan.catchWindow)
-			if left>plan.catchWindow+.4 then s.clock={wall=stamp,t=t,rate=1} end
-			send("caught",s.catch,left,s.clock)
-		elseif typeof(i)=="number" and plan.laps[i] and not s.rows[i] then
-			local lap=plan.laps[i]
-			if kind=="boost" then
-				local grade,k=Rules.gate(t-lap.gate,plan.window,s.fever)
-				if grade~="MISS" then gate(s,i,grade,k) end
-			elseif kind=="shard" and (j==1 or j==2) and math.abs(t-lap.shards[j])<=.9 and not s.shards[i*2+j] then
-				s.shards[i*2+j]=true
-				s.dust+=math.round(lap.base*.5*plan.coinFactor)
-				send("shard",i,j)
+-- Assemble full runtime copies before assigning seats. The saved art scene remains editable.
+local sections={"LaunchArea","AssemblyBay","RollArea","ShopSlots","SpawnMarker"}
+local full=homes.Home_0
+for index=0,5 do
+	local home=homes:WaitForChild("Home_"..index)
+	local transform=Build.homeFrame(index)*Build.homeFrame(0):Inverse()
+	for _,name in sections do
+		local model=home:FindFirstChild(name)
+		if index~=0 then
+			local copy=full[name]:Clone()
+			copy:PivotTo(transform*copy:GetPivot())
+			for _,obj in copy:GetDescendants() do
+				for _,key in {"HomeCF","BaseCF","ClosedPivot"} do
+					local cf=obj:GetAttribute(key)
+					if typeof(cf)=="CFrame" then obj:SetAttribute(key,transform*cf) end
+				end
+				if obj:IsA("BasePart") and obj.Color==Build.homeColor(0) then obj.Color=Build.homeColor(index) end
 			end
+			if model then model:Destroy() end
+			copy.Parent=home
+			model=copy
+		end
+		model.ModelStreamingMode=Enum.ModelStreamingMode.PersistentPerPlayer
+	end
+	slots[index]={home=home,index=index}
+end
+local botLevels={1,2,1,4,3,2}
+local botNames={"织女星","天琴","海燕","猎户","天鹅","星尘"}
+local function resetBot(slot)
+	local k=slot.index
+	local level=botLevels[k+1]
+	local area=slot.home.LaunchArea
+	if area.CatchArms:GetAttribute("Level")~=level then
+		area.CatchArms:Destroy()
+		Arms.build(Build.homeFrame(k)*CFrame.new(0,0,-26),level,area)
+	end
+	Arms.updateBoard(area.FrameBoard,level)
+	slot.bot={name=botNames[k+1].." · NPC",coins=slot.botCoins or 0,level=level,
+		pad={nose=1,tank=2,engine=k%2+1,fins=1},offers={},staged={},sold={}}
+	slot.nextFlight=now()+math.random(25,50)
+	slot.home:SetAttribute("Activity",Http:JSONEncode(slot.bot))
+end
+for _,slot in slots do resetBot(slot) end
+local function join(p)
+	if assigned[p] then return end
+	for k=0,5 do
+		local slot=slots[k]
+		if not slot.player then
+			slot.player=p
+			slot.api=createSession(slot.home,k)
+			slot.bot=nil
+			assigned[p]=slot
+			for _,name in sections do slot.home[name]:AddPersistentPlayer(p) end
+			slot.api.join(p)
+			return
 		end
 	end
-end)
-game:GetService("RunService").Heartbeat:Connect(function()
-	local s=state
-	if not s then return end
-	local wall=now()
-	if s.phase=="assembly" and wall>=s.ready then s.phase="pad"
-	elseif s.phase=="charge" and wall>=s.charge+3.85 then launch(s,s.charge+3.4)
-	elseif s.phase=="flight" then
-		local t=Rules.position(s.clock,wall)
-		for i,lap in plan.laps do
-			if not s.rows[i] and t>lap.gate+.54+.45*s.clock.rate then gate(s,i,"MISS",1) end
-		end
-		if t>=plan.duration+.45 then settle(s,owner) end
-	end
-end)
-local function leave(player)
-	waiting[player]=nil
-	if player~=owner then return end
-	local s=state
-	-- Leaving mid-flight keeps what was earned: laps and shards so far, no catch (counts as a crash)
-	if s and s.phase=="flight" then settle(s,player) end
-	while s and (s.phase=="saving" or s.writing) do task.wait(.1) end
-	if s then pcall(Profiles.change,player,nil,true) end
-	owner,state=nil,nil
-	-- Hand Home_0 to the next waiting player (not while the server is shutting down)
-	if closing then return end
-	for _,p in Players:GetPlayers() do
-		if p~=player and p.Parent then task.spawn(join,p) break end
-	end
+	p:Kick("六个家园均已有人，请加入其他服务器")
+end
+local function leave(p)
+	local slot=assigned[p]
+	if not slot then return end
+	assigned[p]=nil
+	local session=slot.api
+	slot.player,slot.api=nil,nil
+	-- PlayerRemoving can run after engine persistence membership has already been released.
+	resetBot(slot)
+	session.leave(p)
 end
 Players.PlayerAdded:Connect(join)
 Players.PlayerRemoving:Connect(leave)
 for _,p in Players:GetPlayers() do task.spawn(join,p) end
-game:BindToClose(function()
-	closing=true
-	if owner then leave(owner) end
+net.OnServerEvent:Connect(function(p,...)
+	local slot=assigned[p]
+	if slot then slot.api.input(p,...) end
 end)
-task.spawn(function()
-	while task.wait(50) do
-		if owner and state then
-			local p=owner
-			local ok,data=pcall(Profiles.change,p)
-			if (not ok or not data) and p.Parent then p:Kick("存档连接中断，请重新加入") end
+for _,slot in slots do
+	game:GetService("RunService").Heartbeat:Connect(function()
+		if slot.player then slot.api.tick() return end
+		if now()<slot.nextFlight then return end
+		local bot=slot.bot
+		if bot.flight then
+			slot.botCoins=bot.coins+bot.flight.plan.coins+Arms.LEVELS[bot.level].bonus
+			bot.coins=slot.botCoins
+			bot.flight=nil
+			slot.nextFlight=now()+math.random(25,50)
+		else
+			local plan=Rules.performance(bot.pad)
+			bot.flight={id=Http:GenerateGUID(false),plan=plan,clock={wall=now(),t=0,rate=1},body="moon",fever=math.random()<.35,catch="great",lead=.35}
+			slot.nextFlight=now()+plan.duration+.2
 		end
+		slot.home:SetAttribute("Activity",Http:JSONEncode(bot))
+	end)
+end
+task.spawn(function()
+	while task.wait(50) do for p,slot in assigned do task.spawn(slot.api.renew,p) end end
+end)
+game:BindToClose(function()
+	local remaining=0
+	for p in assigned do
+		remaining+=1
+		task.spawn(function() leave(p) remaining-=1 end)
 	end
+	while remaining>0 do task.wait(.1) end
 end)

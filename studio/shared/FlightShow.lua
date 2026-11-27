@@ -396,7 +396,7 @@ function FS.play(S)
 end
 
 function FS.cleanup(S)
-	if S.fever then
+	if S.fever and S.opts.worldFever ~= false then
 		for _, sg in ipairs(S.segs) do
 			if sg.body then setOrbitFever(S, sg.body, false) end
 		end
